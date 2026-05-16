@@ -1,0 +1,312 @@
+# 🚀 Flutter AI App — Architecture Blueprint
+### Inspired by ColabPlatforms.ai | Multi-LLM Mobile App
+
+---
+
+## 🔍 What ColabPlatforms.ai Offers (Website Analysis)
+
+| Feature | Description |
+|---|---|
+| **15+ AI Models** | GPT-4/5, Claude Sonnet, Gemini 2.0 Flash, DeepSeek V3 etc. |
+| **Unified Token Wallet** | Single currency across all models |
+| **Side-by-Side Compare** | Send one prompt → compare multiple model responses |
+| **Rolling Context Window** | Auto-drops oldest messages to stay within token limits |
+| **Voice Input** | Native speech-to-text |
+| **Share Chat** | Generate shareable conversation links |
+| **Workspace** | Organized conversation groups |
+| **Subscription Tiers** | Free → Pro (₹1,499) → Pro Plus (₹2,799) |
+| **File Uploads** | Pro tier supports file/image uploads |
+
+---
+
+## ✅ Your Current Folder Structure — Review
+
+```
+lib/
+├── core/              ✅ Good — shared infra
+├── features/          ✅ Good — feature-first (Clean Architecture)
+│   ├── auth/          ✅ Correct with data/domain/presentation/bloc
+│   ├── chat/          ✅ Correct
+│   ├── models/        ⚠️  RENAME → ai_models/ (conflicts with shared/models)
+│   ├── ai_compare/    ✅ Good unique feature
+│   ├── subscription/  ✅ Good
+│   ├── search/        ✅ Good
+│   ├── profile/       ✅ Good
+│   ├── settings/      ✅ Good
+│   └── workspace/     ✅ Good
+├── shared/            ✅ Good — reusable widgets/models/helpers
+├── app/               ✅ Good — routes + injection
+└── main.dart          ✅ Good
+```
+
+### ⚠️ Issues Found
+
+| Issue | Why It's a Problem | Fix |
+|---|---|---|
+| `features/models/` | Ambiguous name — conflicts with `shared/models/` | Rename to `features/ai_models/` |
+| `features/auth/bloc/` | BLoC folder should be inside `presentation/` or kept at feature root — be consistent | Keep at feature root (your current way is fine) |
+| Missing `features/token_wallet/` | Token/wallet is a core feature of ColabPlatforms | Add it |
+| Missing `features/voice/` | Voice input is a key feature | Add it or put inside `chat/` |
+| `core/services/` is too generic | Split into `ai_service`, `auth_service` etc. inside features | See recommendation below |
+| No `l10n/` or `assets/` defined | Scalable apps need i18n from day 1 | Add at project root |
+
+---
+
+## 🏗️ Recommended Final Folder Structure
+
+```
+lib/
+│
+├── core/
+│   ├── network/           # Dio client, interceptors, API base
+│   ├── errors/            # Failure classes, error handler
+│   ├── constants/         # API keys refs, app constants, enums
+│   ├── theme/             # AppTheme, colors, text styles, spacing
+│   ├── utils/             # Date formatters, validators, helpers
+│   ├── services/          # Firebase, analytics, crash reporting
+│   ├── widgets/           # Truly global widgets (AppButton, AppLoader)
+│   ├── extensions/        # String, DateTime, Context extensions
+│   └── storage/           # Hive/SharedPreferences/SecureStorage wrappers
+│
+├── features/
+│   │
+│   ├── auth/
+│   │   ├── data/          # AuthRemoteDataSource, AuthLocalDataSource, AuthRepoImpl
+│   │   ├── domain/        # AuthRepository (abstract), UseCases (Login, Logout, Register)
+│   │   ├── presentation/  # LoginPage, SignupPage, SplashPage, widgets/
+│   │   └── bloc/          # AuthBloc, AuthEvent, AuthState
+│   │
+│   ├── chat/
+│   │   ├── data/          # ChatRemoteDataSource (SSE/WebSocket), ChatRepoImpl, MessageModel
+│   │   ├── domain/        # ChatRepository, SendMessageUseCase, GetHistoryUseCase
+│   │   ├── presentation/  # ChatPage, ChatBubble, ModelSelectorWidget, VoiceInputWidget
+│   │   └── bloc/          # ChatBloc, ChatEvent, ChatState
+│   │
+│   ├── ai_models/         # ← RENAMED from 'models'
+│   │   ├── data/          # ModelsRemoteDataSource, ModelEntity
+│   │   ├── domain/        # GetAvailableModelsUseCase
+│   │   ├── presentation/  # ModelListPage, ModelCard, ModelDetailPage
+│   │   └── bloc/          # ModelsBloc
+│   │
+│   ├── ai_compare/
+│   │   ├── data/
+│   │   ├── domain/        # CompareModelsUseCase
+│   │   ├── presentation/  # ComparePage, SideBySideView, CompareResultCard
+│   │   └── bloc/          # CompareBloc
+│   │
+│   ├── token_wallet/      # ← ADD THIS (core feature!)
+│   │   ├── data/
+│   │   ├── domain/        # GetBalanceUseCase, DeductTokensUseCase
+│   │   ├── presentation/  # WalletPage, TokenHistoryList, BalanceWidget
+│   │   └── bloc/          # WalletBloc
+│   │
+│   ├── subscription/
+│   │   ├── data/
+│   │   ├── domain/        # GetPlansUseCase, SubscribeUseCase
+│   │   ├── presentation/  # PlansPage, PlanCard, PaymentPage
+│   │   └── bloc/          # SubscriptionBloc
+│   │
+│   ├── search/
+│   │   ├── data/
+│   │   ├── domain/
+│   │   ├── presentation/  # SearchPage, SearchResultItem
+│   │   └── bloc/          # SearchBloc
+│   │
+│   ├── profile/
+│   │   ├── data/
+│   │   ├── domain/
+│   │   ├── presentation/  # ProfilePage, EditProfilePage, AvatarWidget
+│   │   └── bloc/          # ProfileBloc
+│   │
+│   ├── settings/
+│   │   ├── data/
+│   │   ├── domain/
+│   │   ├── presentation/  # SettingsPage, ThemeToggle, NotificationSettings
+│   │   └── bloc/          # SettingsBloc
+│   │
+│   └── workspace/
+│       ├── data/
+│       ├── domain/        # CreateWorkspaceUseCase, GetWorkspacesUseCase
+│       ├── presentation/  # WorkspacePage, WorkspaceCard, NewWorkspaceDialog
+│       └── bloc/          # WorkspaceBloc
+│
+├── shared/
+│   ├── widgets/           # Shared UI components used by 2+ features
+│   ├── models/            # Shared data models (UserModel, TokenModel)
+│   └── helpers/           # Business logic helpers shared across features
+│
+├── app/
+│   ├── routes/            # GoRouter route definitions
+│   │   ├── app_router.dart
+│   │   └── route_names.dart
+│   ├── app.dart           # MaterialApp / root widget
+│   └── injection.dart     # GetIt service locator setup
+│
+└── main.dart
+```
+
+---
+
+## 🧠 State Management — Use BLoC (You Already Chose Right)
+
+> **Recommendation: `flutter_bloc` ✅ — Best for this scale**
+
+### Why BLoC over others for YOUR app:
+
+| Criteria | BLoC | Riverpod | GetX |
+|---|---|---|---|
+| **Scalability** | ✅ Excellent | ✅ Good | ⚠️ Gets messy at scale |
+| **Streaming (SSE/AI responses)** | ✅ Native with StreamSubscription | ✅ Good | ⚠️ Manual |
+| **Testability** | ✅ Best-in-class | ✅ Good | ❌ Hard |
+| **Team/Enterprise standard** | ✅ Industry standard | ✅ Growing | ❌ Non-standard |
+| **Multi-model parallel state** | ✅ Multiple BLoCs easily | ✅ | ⚠️ |
+
+### BLoC Pattern for AI Chat (Streaming)
+
+```dart
+// ChatEvent
+abstract class ChatEvent {}
+class SendMessage extends ChatEvent { final String prompt; final String modelId; }
+class StreamChunkReceived extends ChatEvent { final String chunk; }
+class StreamCompleted extends ChatEvent {}
+
+// ChatState
+abstract class ChatState {}
+class ChatIdle extends ChatState {}
+class ChatStreaming extends ChatState { final String partialResponse; }
+class ChatDone extends ChatState { final String fullResponse; }
+class ChatError extends ChatState { final String message; }
+```
+
+---
+
+## 📦 Essential Packages
+
+```yaml
+dependencies:
+  # State Management
+  flutter_bloc: ^8.1.5
+  equatable: ^2.0.5        # Value equality for BLoC states
+
+  # DI
+  get_it: ^7.6.7
+  injectable: ^2.3.2
+
+  # Navigation
+  go_router: ^13.2.0
+
+  # Networking (AI APIs use SSE streaming)
+  dio: ^5.4.3
+  http: ^1.2.0             # For SSE streaming
+
+  # Local Storage
+  hive_flutter: ^1.1.0     # Fast local DB for chat history
+  flutter_secure_storage: ^9.0.0  # Store API tokens securely
+
+  # UI
+  flutter_markdown: ^0.6.18  # Render AI markdown responses
+  lottie: ^3.1.0             # Animations
+  shimmer: ^3.0.0            # Loading skeletons
+
+  # Voice
+  speech_to_text: ^6.6.0
+
+  # Auth
+  firebase_auth: ^4.17.0
+  google_sign_in: ^6.2.1
+
+  # Payments (India)
+  razorpay_flutter: ^1.3.6   # For INR subscriptions
+
+  # Misc
+  cached_network_image: ^3.3.1
+  intl: ^0.19.0
+  logger: ^2.3.0
+```
+
+---
+
+## 🔥 Key Architecture Decisions
+
+### 1. AI Streaming (SSE) Pattern
+```
+UI (ChatPage) → ChatBloc → ChatRepository → ChatRemoteDataSource
+                                              ↓
+                                    StreamController<String>
+                                    (chunks arrive in real-time)
+```
+
+### 2. Multi-Model Compare Architecture
+```
+CompareBloc manages a List<ModelResponseState>
+One StreamSubscription per model running in parallel
+Each chunk update triggers emit() with updated list
+```
+
+### 3. Token Wallet — Global Access
+```dart
+// In injection.dart — register as singleton
+getIt.registerSingleton<WalletBloc>(WalletBloc());
+
+// Access from any screen via BlocProvider.value()
+// Deduct tokens after every AI response
+```
+
+### 4. Clean Architecture Flow (per feature)
+```
+Presentation (BLoC) 
+    → Domain (UseCase → Repository interface)
+        → Data (Repository impl → DataSource → API/DB)
+```
+
+---
+
+## 🎯 Priority Build Order
+
+```
+Phase 1 — Foundation
+  ✅ Folder structure (done!)
+  → core/network (Dio + interceptors)
+  → core/theme (dark mode, colors, typography)
+  → app/routes (GoRouter setup)
+  → app/injection (GetIt setup)
+
+Phase 2 — Auth
+  → auth feature (Firebase Auth + Google Sign-In)
+
+Phase 3 — Core Chat
+  → chat feature with single model SSE streaming
+  → ai_models feature (model selector)
+
+Phase 4 — Token Wallet
+  → token_wallet feature
+  → subscription feature
+
+Phase 5 — Power Features
+  → ai_compare (side-by-side)
+  → workspace feature
+  → search feature
+  → voice input
+
+Phase 6 — Polish
+  → profile + settings
+  → animations, empty states, error handling
+  → Razorpay payment integration
+```
+
+---
+
+## 💡 Scalability Tips
+
+1. **Use `abstract` Repository interfaces** in domain — never call API directly from BLoC
+2. **One BLoC per feature** — avoid God BLoCs with 50+ events
+3. **Use `Equatable` on all States/Events** — prevents unnecessary rebuilds
+4. **SSE streaming** → use `StreamSubscription` inside BLoC, cancel in `close()`
+5. **Chat history** → store in Hive locally, sync to Firestore in background
+6. **Model config** → fetch from remote config so you can add new models without app update
+7. **Token wallet** → always deduct optimistically, rollback on error
+8. **GoRouter** over Navigator 2.0 directly — much cleaner for deep linking
+
+---
+
+> **Bottom line:** Your architecture foundation is solid ✅. The Clean Architecture + BLoC + feature-first structure is the right choice for this scale. Just rename `models/` → `ai_models/`, add `token_wallet/` feature, and follow the build phases above.

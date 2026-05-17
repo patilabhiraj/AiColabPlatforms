@@ -95,29 +95,29 @@ class SplashBottomContent extends StatelessWidget {
                   const SizedBox(height: 10),
 
                   // Secondary — Sign In
-                  // SizedBox(
-                  //   width: double.infinity,
-                  //   height: 54,
-                  //   child: OutlinedButton(
-                  //     onPressed: onSignIn,
-                  //     style: OutlinedButton.styleFrom(
-                  //       side: const BorderSide(
-                  //         color: Color(0x33FFFFFF), // white 20%
-                  //       ),
-                  //       shape: RoundedRectangleBorder(
-                  //         borderRadius: BorderRadius.circular(14),
-                  //       ),
-                  //     ),
-                  //     child: const Text(
-                  //       'Already have an account?  Sign In',
-                  //       style: TextStyle(
-                  //         fontSize: 15,
-                  //         fontWeight: FontWeight.w500,
-                  //         color: Color(0xFFD4D4D8),
-                  //       ),
-                  //     ),
-                  //   ),
-                  // ),
+                  SizedBox(
+                    width: double.infinity,
+                    height: 54,
+                    child: OutlinedButton(
+                      onPressed: onSignIn,
+                      style: OutlinedButton.styleFrom(
+                        side: const BorderSide(
+                          color: Color(0x33FFFFFF), // white 20%
+                        ),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                      ),
+                      child: const Text(
+                        'Already have an account?  Sign In',
+                        style: TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w500,
+                          color: Color(0xFFD4D4D8),
+                        ),
+                      ),
+                    ),
+                  ),
                   const SizedBox(height: 32),
                 ],
               ),

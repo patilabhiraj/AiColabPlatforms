@@ -1,0 +1,165 @@
+import 'package:flutter/material.dart';
+
+import '../../../core/theme/app_colors.dart';
+import 'forgot_password_page.dart';
+import 'register_page.dart';
+import 'widgets/widgets.dart';
+
+class LoginPage extends StatefulWidget {
+  const LoginPage({super.key});
+
+  @override
+  State<LoginPage> createState() => _LoginPageState();
+}
+
+class _LoginPageState extends State<LoginPage> {
+  final _emailCtrl = TextEditingController();
+  final _passwordCtrl = TextEditingController();
+
+  @override
+  void dispose() {
+    _emailCtrl.dispose();
+    _passwordCtrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: AppColors.darkBackground,
+      appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        iconTheme: const IconThemeData(color: AppColors.darkForeground),
+      ),
+      body: SafeArea(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.symmetric(horizontal: 24),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              const SizedBox(height: 8),
+
+              // ── Logo ──────────────────────────────────────────────────────────
+              const Center(child: AuthLogo()),
+              const SizedBox(height: 32),
+
+              // ── Title ─────────────────────────────────────────────────────────
+              const Text(
+                'Welcome back',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: AppColors.landingPrimary,
+                  fontSize: 28,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              const SizedBox(height: 6),
+              const Text(
+                'Sign in to AI Colab Chat',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: AppColors.darkMutedForeground,
+                  fontSize: 14,
+                ),
+              ),
+              const SizedBox(height: 32),
+
+              // ── Email ─────────────────────────────────────────────────────────
+              AuthTextField(
+                label: 'Email',
+                hint: 'you@example.com',
+                controller: _emailCtrl,
+                keyboardType: TextInputType.emailAddress,
+                textInputAction: TextInputAction.next,
+              ),
+              const SizedBox(height: 16),
+
+              // ── Password ──────────────────────────────────────────────────────
+              AuthTextField(
+                label: 'Password',
+                hint: '••••••••',
+                isPassword: true,
+                controller: _passwordCtrl,
+                textInputAction: TextInputAction.done,
+              ),
+              const SizedBox(height: 24),
+
+              // ── Sign in button ────────────────────────────────────────────────
+              GradientButton(
+                label: 'Sign in',
+                onPressed: () {
+                  // TODO: sign in with email & password
+                },
+              ),
+              const SizedBox(height: 24),
+
+              // ── OR divider ────────────────────────────────────────────────────
+              const OrDivider(),
+              const SizedBox(height: 24),
+
+              // ── Google button ─────────────────────────────────────────────────
+              GoogleSignInButton(
+                onPressed: () {
+                  // TODO: sign in with Google
+                },
+              ),
+              const SizedBox(height: 8),
+
+              // ── Forgot password ───────────────────────────────────────────────
+              TextButton(
+                onPressed: () {
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) => const ForgotPasswordPage(),
+                    ),
+                  );
+                },
+                child: const Text(
+                  'Forgot password?',
+                  style: TextStyle(
+                    color: AppColors.darkForeground,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+
+              // ── Sign up link ──────────────────────────────────────────────────
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Text(
+                    "Don't have an account?",
+                    style: TextStyle(
+                      color: AppColors.darkMutedForeground,
+                      fontSize: 14,
+                    ),
+                  ),
+                  TextButton(
+                    onPressed: () {
+                      Navigator.of(context).pushReplacement(
+                        MaterialPageRoute(
+                          builder: (_) => const RegisterPage(),
+                        ),
+                      );
+                    },
+                    child: const Text(
+                      'Sign up',
+                      style: TextStyle(
+                        color: AppColors.darkForeground,
+                        fontSize: 14,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 24),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}

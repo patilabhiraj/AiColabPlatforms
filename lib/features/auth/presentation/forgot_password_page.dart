@@ -1,12 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../core/theme/app_colors.dart';
+import '../bloc/forgot_password_bloc.dart';
 import 'login_page.dart';
 import 'widgets/widgets.dart';
 
-// ─────────────────────────────────────────────────────────────────────────────
-// ForgotPasswordPage — 3-step flow: email → OTP → new password → success
-// ─────────────────────────────────────────────────────────────────────────────
 class ForgotPasswordPage extends StatefulWidget {
   const ForgotPasswordPage({super.key});
 
@@ -17,6 +16,7 @@ class ForgotPasswordPage extends StatefulWidget {
 class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
   int _step = 0;
   String _email = '';
+  String _otp = '';
 
   static const _titles = [
     'Add your email  1 / 3',
@@ -37,95 +37,134 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.darkBackground,
-      // Hide AppBar on success screen
-      appBar: _step < 3
-          ? AppBar(
-              backgroundColor: Colors.transparent,
-              elevation: 0,
-              leading: IconButton(
-                icon: const Icon(
-                  Icons.arrow_back_ios_new_rounded,
-                  size: 20,
-                  color: AppColors.darkForeground,
-                ),
-                onPressed: _back,
-              ),
-              title: Text(
-                _titles[_step],
-                style: const TextStyle(
-                  color: AppColors.darkForeground,
-                  fontSize: 16,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-              centerTitle: false,
-            )
-          : null,
-      body: SafeArea(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            // ── Step progress pills ──────────────────────────────────────────
-            if (_step < 3) ...[
-              const SizedBox(height: 6),
-              StepProgressIndicator(totalSteps: 3, currentStep: _step),
-              const SizedBox(height: 4),
-            ],
+    return BlocConsumer<ForgotPasswordBloc, ForgotPasswordState>(
+      listener: (context, state) {
+        if (state is ForgotPasswordOtpSent) {
+          _next(); // email → OTP step
+        } else if (state is ForgotPasswordSuccess) {
+          setState(() => _step = 3); // jump to success
+        } else if (state is ForgotPasswordError) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(state.message),
+              backgroundColor: AppColors.landingPrimary,
+            ),
+          );
+        }
+      },
+      builder: (context, state) {
+        final isLoading = state is ForgotPasswordLoading;
 
-            // ── Animated step content ────────────────────────────────────────
-            Expanded(
-              child: AnimatedSwitcher(
-                duration: const Duration(milliseconds: 280),
-                transitionBuilder: (child, anim) => FadeTransition(
-                  opacity: anim,
-                  child: SlideTransition(
-                    position: Tween<Offset>(
-                      begin: const Offset(0.06, 0),
-                      end: Offset.zero,
-                    ).animate(CurvedAnimation(
-                      parent: anim,
-                      curve: Curves.easeOut,
-                    )),
-                    child: child,
-                  ),
-                ),
-                child: KeyedSubtree(
-                  key: ValueKey(_step),
-                  child: [
-                    _EmailStep(onNext: (email) {
-                      _email = email;
-                      _next();
-                    }),
-                    _OtpStep(
-                      email: _email,
-                      onNext: _next,
-                      onChangeEmail: _back,
+        return Scaffold(
+          backgroundColor: AppColors.darkBackground,
+          appBar: _step < 3
+              ? AppBar(
+                  backgroundColor: Colors.transparent,
+                  elevation: 0,
+                  leading: isLoading
+                      ? null
+                      : IconButton(
+                          icon: const Icon(
+                            Icons.arrow_back_ios_new_rounded,
+                            size: 20,
+                            color: AppColors.darkForeground,
+                          ),
+                          onPressed: _back,
+                        ),
+                  title: Text(
+                    _titles[_step],
+                    style: const TextStyle(
+                      color: AppColors.darkForeground,
+                      fontSize: 16,
+                      fontWeight: FontWeight.w700,
                     ),
-                    _NewPasswordStep(onNext: _next),
-                    _SuccessStep(
-                      onSignIn: () => Navigator.of(context).pushAndRemoveUntil(
-                        MaterialPageRoute(builder: (_) => const LoginPage()),
-                        (route) => false,
+                  ),
+                  centerTitle: false,
+                )
+              : null,
+          body: SafeArea(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                if (_step < 3) ...[
+                  const SizedBox(height: 6),
+                  StepProgressIndicator(totalSteps: 3, currentStep: _step),
+                  const SizedBox(height: 4),
+                ],
+                Expanded(
+                  child: AnimatedSwitcher(
+                    duration: const Duration(milliseconds: 280),
+                    transitionBuilder: (child, anim) => FadeTransition(
+                      opacity: anim,
+                      child: SlideTransition(
+                        position: Tween<Offset>(
+                          begin: const Offset(0.06, 0),
+                          end: Offset.zero,
+                        ).animate(CurvedAnimation(
+                          parent: anim,
+                          curve: Curves.easeOut,
+                        )),
+                        child: child,
                       ),
                     ),
-                  ][_step],
+                    child: KeyedSubtree(
+                      key: ValueKey(_step),
+                      child: [
+                        _EmailStep(
+                          isLoading: isLoading,
+                          onNext: (email) {
+                            _email = email;
+                            context
+                                .read<ForgotPasswordBloc>()
+                                .add(FPSendOtpRequested(email));
+                          },
+                        ),
+                        _OtpStep(
+                          email: _email,
+                          isLoading: isLoading,
+                          onNext: (otp) {
+                            _otp = otp;
+                            _next(); // OTP → password step (no API call)
+                          },
+                          onChangeEmail: _back,
+                        ),
+                        _NewPasswordStep(
+                          isLoading: isLoading,
+                          onNext: (password) {
+                            context.read<ForgotPasswordBloc>().add(
+                              FPResetPasswordRequested(
+                                email: _email,
+                                otp: _otp,
+                                newPassword: password,
+                              ),
+                            );
+                          },
+                        ),
+                        _SuccessStep(
+                          onSignIn: () =>
+                              Navigator.of(context).pushAndRemoveUntil(
+                            MaterialPageRoute(
+                                builder: (_) => const LoginPage()),
+                            (route) => false,
+                          ),
+                        ),
+                      ][_step],
+                    ),
+                  ),
                 ),
-              ),
+              ],
             ),
-          ],
-        ),
-      ),
+          ),
+        );
+      },
     );
   }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Step 1 — Enter email
-// ─────────────────────────────────────────────────────────────────────────────
+// ── Step 1 — Email ────────────────────────────────────────────────────────────
 class _EmailStep extends StatefulWidget {
-  const _EmailStep({required this.onNext});
+  const _EmailStep({required this.isLoading, required this.onNext});
+  final bool isLoading;
   final ValueChanged<String> onNext;
 
   @override
@@ -147,7 +186,6 @@ class _EmailStepState extends State<_EmailStep> {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         const SizedBox(height: 32),
-
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 24),
           child: AuthTextField(
@@ -158,17 +196,21 @@ class _EmailStepState extends State<_EmailStep> {
             textInputAction: TextInputAction.done,
           ),
         ),
-
         const SizedBox(height: 24),
-
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 24),
-          child: GradientButton(
-            label: 'Send Code',
-            onPressed: () => widget.onNext(_ctrl.text.trim()),
-          ),
+          child: widget.isLoading
+              ? const Center(
+                  child: CircularProgressIndicator(
+                    color: AppColors.landingPrimary,
+                  ),
+                )
+              : GradientButton(
+                  label: 'Send Code',
+                  onPressed: () =>
+                      widget.onNext(_ctrl.text.trim().toLowerCase()),
+                ),
         ),
-
         const Spacer(),
         const _TermsText(),
         const SizedBox(height: 28),
@@ -177,18 +219,17 @@ class _EmailStepState extends State<_EmailStep> {
   }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Step 2 — Verify OTP
-// ─────────────────────────────────────────────────────────────────────────────
+// ── Step 2 — OTP ──────────────────────────────────────────────────────────────
 class _OtpStep extends StatefulWidget {
   const _OtpStep({
     required this.email,
+    required this.isLoading,
     required this.onNext,
     required this.onChangeEmail,
   });
-
   final String email;
-  final VoidCallback onNext;
+  final bool isLoading;
+  final ValueChanged<String> onNext;
   final VoidCallback onChangeEmail;
 
   @override
@@ -196,14 +237,14 @@ class _OtpStep extends StatefulWidget {
 }
 
 class _OtpStepState extends State<_OtpStep> {
+  String _otp = '';
+
   @override
   Widget build(BuildContext context) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         const SizedBox(height: 20),
-
-        // Description
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 24),
           child: Text(
@@ -216,10 +257,7 @@ class _OtpStepState extends State<_OtpStep> {
             ),
           ),
         ),
-
         const SizedBox(height: 28),
-
-        // "Code" label
         const Padding(
           padding: EdgeInsets.symmetric(horizontal: 24),
           child: Text(
@@ -231,33 +269,30 @@ class _OtpStepState extends State<_OtpStep> {
             ),
           ),
         ),
-
         const SizedBox(height: 10),
-
-        // OTP boxes
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 24),
           child: OtpInputField(
             length: 5,
-            onChanged: (_) {},
-            onCompleted: (_) {},
+            onChanged: (val) => setState(() => _otp = val),
+            onCompleted: (val) => setState(() => _otp = val),
           ),
         ),
-
         const SizedBox(height: 24),
-
-        // Verify button
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 24),
-          child: GradientButton(
-            label: 'Verify Email',
-            onPressed: widget.onNext,
-          ),
+          child: widget.isLoading
+              ? const Center(
+                  child: CircularProgressIndicator(
+                    color: AppColors.landingPrimary,
+                  ),
+                )
+              : GradientButton(
+                  label: 'Verify Email',
+                  onPressed: () => widget.onNext(_otp),
+                ),
         ),
-
         const SizedBox(height: 16),
-
-        // Wrong email link
         Center(
           child: TextButton(
             onPressed: widget.onChangeEmail,
@@ -281,7 +316,6 @@ class _OtpStepState extends State<_OtpStep> {
             ),
           ),
         ),
-
         const Spacer(),
         const _TermsText(),
         const SizedBox(height: 28),
@@ -290,12 +324,11 @@ class _OtpStepState extends State<_OtpStep> {
   }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Step 3 — Create new password
-// ─────────────────────────────────────────────────────────────────────────────
+// ── Step 3 — New password ─────────────────────────────────────────────────────
 class _NewPasswordStep extends StatefulWidget {
-  const _NewPasswordStep({required this.onNext});
-  final VoidCallback onNext;
+  const _NewPasswordStep({required this.isLoading, required this.onNext});
+  final bool isLoading;
+  final ValueChanged<String> onNext;
 
   @override
   State<_NewPasswordStep> createState() => _NewPasswordStepState();
@@ -324,24 +357,25 @@ class _NewPasswordStepState extends State<_NewPasswordStep> {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           const SizedBox(height: 32),
-
           AuthTextField(
-            label: 'Password',
+            label: 'New Password',
             hint: 'Enter new password',
             isPassword: true,
             controller: _ctrl,
             textInputAction: TextInputAction.done,
           ),
-
           PasswordStrengthIndicator(password: _ctrl.text),
-
           const SizedBox(height: 28),
-
-          GradientButton(
-            label: 'Reset Password',
-            onPressed: widget.onNext,
-          ),
-
+          widget.isLoading
+              ? const Center(
+                  child: CircularProgressIndicator(
+                    color: AppColors.landingPrimary,
+                  ),
+                )
+              : GradientButton(
+                  label: 'Reset Password',
+                  onPressed: () => widget.onNext(_ctrl.text),
+                ),
           const SizedBox(height: 40),
           const _TermsText(),
           const SizedBox(height: 28),
@@ -351,9 +385,7 @@ class _NewPasswordStepState extends State<_NewPasswordStep> {
   }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Step 4 — Success
-// ─────────────────────────────────────────────────────────────────────────────
+// ── Step 4 — Success ──────────────────────────────────────────────────────────
 class _SuccessStep extends StatelessWidget {
   const _SuccessStep({required this.onSignIn});
   final VoidCallback onSignIn;
@@ -365,7 +397,6 @@ class _SuccessStep extends StatelessWidget {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          // ── Checkmark icon ─────────────────────────────────────────────────
           Container(
             width: 80,
             height: 80,
@@ -379,10 +410,7 @@ class _SuccessStep extends StatelessWidget {
               size: 42,
             ),
           ),
-
           const SizedBox(height: 28),
-
-          // ── Title ──────────────────────────────────────────────────────────
           const Text(
             'Password reset\nsuccessfully!',
             textAlign: TextAlign.center,
@@ -393,9 +421,7 @@ class _SuccessStep extends StatelessWidget {
               height: 1.3,
             ),
           ),
-
           const SizedBox(height: 12),
-
           const Text(
             'Your password has been updated.\nSign in with your new password to continue.',
             textAlign: TextAlign.center,
@@ -405,10 +431,7 @@ class _SuccessStep extends StatelessWidget {
               height: 1.55,
             ),
           ),
-
           const SizedBox(height: 40),
-
-          // ── Sign in button ─────────────────────────────────────────────────
           GradientButton(label: 'Sign In', onPressed: onSignIn),
         ],
       ),
@@ -416,9 +439,7 @@ class _SuccessStep extends StatelessWidget {
   }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Shared — Terms & Privacy footer
-// ─────────────────────────────────────────────────────────────────────────────
+// ── Shared footer ─────────────────────────────────────────────────────────────
 class _TermsText extends StatelessWidget {
   const _TermsText();
 

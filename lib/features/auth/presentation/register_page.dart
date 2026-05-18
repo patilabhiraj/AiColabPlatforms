@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
-
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter_web_auth_2/flutter_web_auth_2.dart';
+
 import '../../../core/theme/app_colors.dart';
 import '../../../core/constants/api_constants.dart';
 import '../../chat/presentation/chat_page.dart';
 import '../bloc/auth_bloc.dart';
-import 'google_auth_webview_page.dart';
 import 'login_page.dart';
 import 'widgets/widgets.dart';
 
@@ -170,15 +170,19 @@ class _RegisterPageState extends State<RegisterPage> {
                   // ── Google button ─────────────────────────────────────────────────
                   GoogleSignInButton(
                     onPressed: () async {
-                      const authUrl = "${ApiConstants.baseUrl}/api/auth/google/start";
-                      final token = await Navigator.of(context).push<String>(
-                        MaterialPageRoute(
-                          builder: (_) => const GoogleAuthWebViewPage(authUrl: authUrl),
-                        ),
-                      );
-
-                      if (token != null && context.mounted) {
-                        context.read<AuthBloc>().add(AuthGoogleSignInRequested(token: token));
+                      try {
+                        final result = await FlutterWebAuth2.authenticate(
+                          url: '${ApiConstants.baseUrl}${ApiConstants.googleStart}',
+                          callbackUrlScheme: 'colabplatforms',
+                        );
+                        final token = Uri.parse(result).queryParameters['token'];
+                        if (token != null && context.mounted) {
+                          context.read<AuthBloc>().add(
+                            AuthGoogleSignInRequested(token: token),
+                          );
+                        }
+                      } catch (_) {
+                        // user cancelled
                       }
                     },
                   ),

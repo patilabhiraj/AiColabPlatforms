@@ -1,7 +1,9 @@
-import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'injection.dart';
 
+import 'package:flutter/material.dart';
 import '../core/theme/theme.dart';
+import '../features/auth/bloc/auth_bloc.dart';
 import '../features/auth/bloc/splash_bloc.dart';
 import '../features/auth/presentation/splash_page.dart';
 
@@ -10,19 +12,22 @@ class App extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'ColabPlatforms AI',
-      debugShowCheckedModeBanner: false,
+    return MultiBlocProvider(
+      providers: [
+        BlocProvider(create: (_) => SplashBloc()),
+        BlocProvider(create: (_) => sl<AuthBloc>()),
+      ],
+      child: MaterialApp(
+        title: 'ColabPlatforms AI',
+        debugShowCheckedModeBanner: false,
 
-      // ── Themes ──────────────────────────────────────────────────────────────
-      theme: AppTheme.light,
-      darkTheme: AppTheme.dark,
-      themeMode: ThemeMode.dark, // app defaults to dark
+        // ── Themes ──────────────────────────────────────────────────────────────
+        theme: AppTheme.light,
+        darkTheme: AppTheme.dark,
+        themeMode: ThemeMode.system, // app defaults to dark
 
-      // ── Root: provide SplashBloc and show SplashPage ──────────────────────
-      home: BlocProvider(
-        create: (_) => SplashBloc(),
-        child: const SplashPage(),
+        // ── Root: show SplashPage ───────────────────────────────────────────────
+        home: const SplashPage(),
       ),
     );
   }

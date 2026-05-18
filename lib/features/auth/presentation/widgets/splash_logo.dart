@@ -1,6 +1,7 @@
+import 'package:colabplatforms_ai/features/auth/presentation/widgets/auth_logo.dart';
 import 'package:flutter/material.dart';
 
-import '../../../../core/theme/app_colors.dart';
+
 
 /// Animated brand logo for the splash screen.
 ///
@@ -40,42 +41,42 @@ class SplashLogo extends StatelessWidget {
               mainAxisSize: MainAxisSize.min,
               children: [
                 // ── Icon container with gradient + glow ──────────────────────
-                Container(
-                  width: 120,
-                  height: 120,
-                  // decoration: BoxDecoration(
-                  //   shape: BoxShape.circle,
-                  //   boxShadow: [
-                  //     BoxShadow(
-                  //       color: AppColors.landingPrimary
-                  //           .withValues(alpha: 0.45 * glowAnimation.value),
-                  //       blurRadius: 50,
-                  //       spreadRadius: 12,
-                  //     ),
-                  //     BoxShadow(
-                  //       color: AppColors.darkSidebarPrimary
-                  //           .withValues(alpha: 0.30 * glowAnimation.value),
-                  //       blurRadius: 30,
-                  //       spreadRadius: 6,
-                  //     ),
-                  //   ],
-                  //   gradient: const LinearGradient(
-                  //     begin: Alignment.topLeft,
-                  //     end: Alignment.bottomRight,
-                  //     colors: [
-                  //       Color(0xFF861043), // landingPrimary
-                  //       Color(0xFF530929), // landingPrimaryHover
-                  //       Color(0xFF3B1F5E), // deep purple accent
-                  //     ],
-                  //   ),
-                  // ),
-                  child: const Icon(
-                    Icons.auto_awesome,
-                    color: Colors.white,
-                    size: 54,
-                  ),
-                ),
-
+                // Container(
+                //   width: 120,
+                //   height: 120,
+                //   // decoration: BoxDecoration(
+                //   //   shape: BoxShape.circle,
+                //   //   boxShadow: [
+                //   //     BoxShadow(
+                //   //       color: AppColors.landingPrimary
+                //   //           .withValues(alpha: 0.45 * glowAnimation.value),
+                //   //       blurRadius: 50,
+                //   //       spreadRadius: 12,
+                //   //     ),
+                //   //     BoxShadow(
+                //   //       color: AppColors.darkSidebarPrimary
+                //   //           .withValues(alpha: 0.30 * glowAnimation.value),
+                //   //       blurRadius: 30,
+                //   //       spreadRadius: 6,
+                //   //     ),
+                //   //   ],
+                //   //   gradient: const LinearGradient(
+                //   //     begin: Alignment.topLeft,
+                //   //     end: Alignment.bottomRight,
+                //   //     colors: [
+                //   //       Color(0xFF861043), // landingPrimary
+                //   //       Color(0xFF530929), // landingPrimaryHover
+                //   //       Color(0xFF3B1F5E), // deep purple accent
+                //   //     ],
+                //   //   ),
+                //   // ),
+                //   child: const Icon(
+                //     Icons.auto_awesome,
+                //     color: Colors.white,
+                //     size: 54,
+                //   ),
+                // ),
+                 AuthLogo(),
                 const SizedBox(height: 20),
 
                 // ── App name with gradient shader ────────────────────────────

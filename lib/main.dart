@@ -2,9 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import 'app/app.dart';
+import 'app/injection.dart' as di;
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
+  di.init();
 
   // Force portrait orientation
   SystemChrome.setPreferredOrientations([

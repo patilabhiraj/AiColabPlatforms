@@ -46,6 +46,9 @@ class _AuthTextFieldState extends State<AuthTextField> {
           controller: widget.controller,
           obscureText: widget.isPassword && _obscure,
           keyboardType: widget.keyboardType,
+          textCapitalization: widget.keyboardType == TextInputType.emailAddress
+              ? TextCapitalization.none
+              : TextCapitalization.words,
           textInputAction: widget.textInputAction,
           style: const TextStyle(
             color: AppColors.darkForeground,

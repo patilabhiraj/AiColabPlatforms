@@ -12,7 +12,7 @@ class GradientButton extends StatelessWidget {
     required this.label,
     required this.onPressed,
     this.height = 54.0,
-    this.borderRadius = 14.0,
+    this.borderRadius = 10.0,
   });
 
   final String label;
@@ -36,9 +36,10 @@ class GradientButton extends StatelessWidget {
           ),
           boxShadow: [
             BoxShadow(
-              color: AppColors.landingPrimary.withValues(alpha: 0.40),
-              blurRadius: 20,
-              offset: const Offset(0, 6),
+              color: AppColors.landingPrimary.withValues(alpha: 0.20),
+              blurRadius: 2,
+              spreadRadius: 1,
+              offset: const Offset(0, 1),
             ),
           ],
         ),

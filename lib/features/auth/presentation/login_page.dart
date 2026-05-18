@@ -1,7 +1,12 @@
 import 'package:flutter/material.dart';
 
 import '../../../core/theme/app_colors.dart';
+import '../../../core/constants/api_constants.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import '../../chat/presentation/chat_page.dart';
+import '../bloc/auth_bloc.dart';
 import 'forgot_password_page.dart';
+import 'google_auth_webview_page.dart';
 import 'register_page.dart';
 import 'widgets/widgets.dart';
 
@@ -32,9 +37,27 @@ class _LoginPageState extends State<LoginPage> {
         elevation: 0,
         iconTheme: const IconThemeData(color: AppColors.darkForeground),
       ),
-      body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(horizontal: 24),
+      body: BlocConsumer<AuthBloc, AuthState>(
+        listener: (context, state) {
+          if (state is AuthError) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(state.message),
+                backgroundColor: AppColors.landingPrimary,
+              ),
+            );
+          } else if (state is AuthAuthenticated) {
+            Navigator.of(context).pushReplacement(
+              MaterialPageRoute(builder: (_) => const ChatPage()),
+            );
+          }
+        },
+        builder: (context, state) {
+          final isLoading = state is AuthLoading;
+
+          return SafeArea(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.symmetric(horizontal: 24),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
@@ -86,12 +109,24 @@ class _LoginPageState extends State<LoginPage> {
               const SizedBox(height: 24),
 
               // ── Sign in button ────────────────────────────────────────────────
-              GradientButton(
-                label: 'Sign in',
-                onPressed: () {
-                  // TODO: sign in with email & password
-                },
-              ),
+              isLoading
+                  ? const Center(
+                      child: CircularProgressIndicator(
+                        color: AppColors.landingPrimary,
+                      ),
+                    )
+                  : GradientButton(
+                      label: 'Sign in',
+                      onPressed: () {
+                        FocusScope.of(context).unfocus();
+                        context.read<AuthBloc>().add(
+                              AuthLoginRequested(
+                                email: _emailCtrl.text.trim().toLowerCase(),
+                                password: _passwordCtrl.text,
+                              ),
+                            );
+                      },
+                    ),
               const SizedBox(height: 24),
 
               // ── OR divider ────────────────────────────────────────────────────
@@ -100,8 +135,17 @@ class _LoginPageState extends State<LoginPage> {
 
               // ── Google button ─────────────────────────────────────────────────
               GoogleSignInButton(
-                onPressed: () {
-                  // TODO: sign in with Google
+                onPressed: () async {
+                  const authUrl = "${ApiConstants.baseUrl}/api/auth/google/start";
+                  final token = await Navigator.of(context).push<String>(
+                    MaterialPageRoute(
+                      builder: (_) => const GoogleAuthWebViewPage(authUrl: authUrl),
+                    ),
+                  );
+
+                  if (token != null && context.mounted) {
+                    context.read<AuthBloc>().add(AuthGoogleSignInRequested(token: token));
+                  }
                 },
               ),
               const SizedBox(height: 8),
@@ -159,6 +203,8 @@ class _LoginPageState extends State<LoginPage> {
             ],
           ),
         ),
+      );
+    },
       ),
     );
   }

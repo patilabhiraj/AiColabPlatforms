@@ -10,16 +10,27 @@ class UserModel extends UserEntity {
   });
 
   factory UserModel.fromJson(Map<String, dynamic> json) {
-    // Assuming backend returns a token at the root, and user info in a 'user' object.
-    // Adjust this parsing based on the actual API response structure!
-    final userJson = json['user'] ?? json;
+    // Backend wraps response in a 'data' block
+    final dataJson = json['data'] as Map<String, dynamic>?;
+    final userJson = dataJson?['user'] ?? json['user'] ?? json;
+    
+    final extractedToken = json['token'] ?? 
+                           json['accessToken'] ?? 
+                           json['access_token'] ?? 
+                           dataJson?['token'] ?? 
+                           dataJson?['accessToken'] ?? 
+                           dataJson?['access_token'] ?? 
+                           userJson['token'] ?? 
+                           userJson['accessToken'] ?? 
+                           userJson['access_token'] ?? 
+                           '';
     
     return UserModel(
-      id: userJson['_id'] ?? userJson['id'] ?? '',
+      id: (userJson['_id'] ?? userJson['id'] ?? '').toString(),
       email: userJson['email'] ?? '',
       firstName: userJson['firstName'] ?? '',
       lastName: userJson['lastName'] ?? '',
-      token: json['token'] ?? '', // Extract token if it comes in the response
+      token: extractedToken,
     );
   }
 

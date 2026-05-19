@@ -1,10 +1,13 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
+import '../domain/usecases/get_cached_user_usecase.dart';
 
 part 'splash_event.dart';
 part 'splash_state.dart';
 
 class SplashBloc extends Bloc<SplashEvent, SplashState> {
-  SplashBloc() : super(SplashInitial()) {
+  final GetCachedUserUseCase _getCachedUserUseCase;
+
+  SplashBloc(this._getCachedUserUseCase) : super(SplashInitial()) {
     on<SplashStarted>(_onSplashStarted);
   }
 
@@ -14,19 +17,26 @@ class SplashBloc extends Bloc<SplashEvent, SplashState> {
   ) async {
     emit(SplashLoading());
 
-    // Minimum splash display duration + any init work
-    // (e.g., check cached auth token, load remote config)
-    await Future.delayed(const Duration(milliseconds: 2800));
+    print('DEBUG: SplashBloc started. Checking local session...');
+    // Minimum visual splash display duration
+    await Future.delayed(const Duration(milliseconds: 2200));
 
-    // TODO: Inject CheckAuthStatusUseCase and call it here.
-    // Example:
-    //   final isLoggedIn = await _checkAuthStatus();
-    //   if (isLoggedIn) {
-    //     emit(SplashNavigateToHome());
-    //   } else {
-    //     emit(SplashLoaded());
-    //   }
+    final result = await _getCachedUserUseCase();
 
-    emit(SplashLoaded());
+    result.fold(
+      (failure) {
+        print('DEBUG ERROR: SplashBloc session check failed: ${failure.message}');
+        emit(SplashLoaded());
+      },
+      (user) {
+        if (user != null) {
+          print('DEBUG: Valid local session found for ${user.email}. Redirecting to ChatPage!');
+          emit(SplashNavigateToHome()); // Logged in! Go to Chat
+        } else {
+          print('DEBUG: No active local session found. Showing Onboarding.');
+          emit(SplashLoaded()); // Not logged in! Show sign-in options
+        }
+      },
+    );
   }
 }

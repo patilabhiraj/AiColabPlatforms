@@ -150,7 +150,7 @@ class _SplashPageState extends State<SplashPage> with TickerProviderStateMixin {
   // ── BLoC navigation listener ─────────────────────────────────────────────────
   void _handleState(BuildContext context, SplashState state) {
     if (state is SplashNavigateToHome) {
-      context.go(AppRouter.login);
+      context.go(AppRouter.chat);
     }
   }
 

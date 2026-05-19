@@ -19,4 +19,6 @@ abstract class AuthRepository {
   });
   Future<Either<Failure, void>> verifyEmailOtp(String email, String otp);
   Future<Either<Failure, void>> resendEmailOtp(String email);
+  Future<Either<Failure, UserEntity?>> getCachedUser();
+  Future<Either<Failure, void>> logout();
 }

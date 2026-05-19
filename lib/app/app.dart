@@ -1,11 +1,12 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'injection.dart';
+import 'router.dart';
 
 import 'package:flutter/material.dart';
 import '../core/theme/theme.dart';
 import '../features/auth/bloc/auth_bloc.dart';
+import '../features/auth/bloc/forgot_password_bloc.dart';
 import '../features/auth/bloc/splash_bloc.dart';
-import '../features/auth/presentation/splash_page.dart';
 
 class App extends StatelessWidget {
   const App({super.key});
@@ -16,8 +17,9 @@ class App extends StatelessWidget {
       providers: [
         BlocProvider(create: (_) => SplashBloc()),
         BlocProvider(create: (_) => sl<AuthBloc>()),
+        BlocProvider(create: (_) => sl<ForgotPasswordBloc>()),
       ],
-      child: MaterialApp(
+      child: MaterialApp.router(
         title: 'ColabPlatforms AI',
         debugShowCheckedModeBanner: false,
 
@@ -26,8 +28,8 @@ class App extends StatelessWidget {
         darkTheme: AppTheme.dark,
         themeMode: ThemeMode.system, // app defaults to dark
 
-        // ── Root: show SplashPage ───────────────────────────────────────────────
-        home: const SplashPage(),
+        // ── GoRouter Config ─────────────────────────────────────────────────────
+        routerConfig: AppRouter.router,
       ),
     );
   }

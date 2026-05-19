@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:go_router/go_router.dart';
 
+import '../../../app/router.dart';
 import '../../../core/theme/app_colors.dart';
 import '../bloc/forgot_password_bloc.dart';
-import 'login_page.dart';
 import 'widgets/widgets.dart';
 
 class ForgotPasswordPage extends StatefulWidget {
@@ -141,12 +142,7 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
                           },
                         ),
                         _SuccessStep(
-                          onSignIn: () =>
-                              Navigator.of(context).pushAndRemoveUntil(
-                            MaterialPageRoute(
-                                builder: (_) => const LoginPage()),
-                            (route) => false,
-                          ),
+                          onSignIn: () => context.go(AppRouter.login),
                         ),
                       ][_step],
                     ),
@@ -182,24 +178,21 @@ class _EmailStepState extends State<_EmailStep> {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        const SizedBox(height: 32),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 24),
-          child: AuthTextField(
+    return SingleChildScrollView(
+      padding: const EdgeInsets.symmetric(horizontal: 24),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          const SizedBox(height: 32),
+          AuthTextField(
             label: 'Email',
             hint: 'you@example.com',
             controller: _ctrl,
             keyboardType: TextInputType.emailAddress,
             textInputAction: TextInputAction.done,
           ),
-        ),
-        const SizedBox(height: 24),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 24),
-          child: widget.isLoading
+          const SizedBox(height: 24),
+          widget.isLoading
               ? const Center(
                   child: CircularProgressIndicator(
                     color: AppColors.landingPrimary,
@@ -210,11 +203,11 @@ class _EmailStepState extends State<_EmailStep> {
                   onPressed: () =>
                       widget.onNext(_ctrl.text.trim().toLowerCase()),
                 ),
-        ),
-        const Spacer(),
-        const _TermsText(),
-        const SizedBox(height: 28),
-      ],
+          const SizedBox(height: 24),
+          const _TermsText(),
+          const SizedBox(height: 28),
+        ],
+      ),
     );
   }
 }
@@ -241,14 +234,14 @@ class _OtpStepState extends State<_OtpStep> {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        const SizedBox(height: 20),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 24),
-          child: Text(
-            'We just sent a 5-digit code to\n${widget.email.isEmpty ? 'your email' : widget.email},\nenter it below:',
+    return SingleChildScrollView(
+      padding: const EdgeInsets.symmetric(horizontal: 24),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          const SizedBox(height: 20),
+          Text(
+            'We just sent a 6-digit code to\n${widget.email.isEmpty ? 'your email' : widget.email},\nenter it below:',
             textAlign: TextAlign.center,
             style: const TextStyle(
               color: AppColors.darkMutedForeground,
@@ -256,11 +249,8 @@ class _OtpStepState extends State<_OtpStep> {
               height: 1.55,
             ),
           ),
-        ),
-        const SizedBox(height: 28),
-        const Padding(
-          padding: EdgeInsets.symmetric(horizontal: 24),
-          child: Text(
+          const SizedBox(height: 28),
+          const Text(
             'Code',
             style: TextStyle(
               color: AppColors.darkForeground,
@@ -268,20 +258,14 @@ class _OtpStepState extends State<_OtpStep> {
               fontWeight: FontWeight.w500,
             ),
           ),
-        ),
-        const SizedBox(height: 10),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 24),
-          child: OtpInputField(
-            length: 5,
+          const SizedBox(height: 10),
+          OtpInputField(
+            length: 6,
             onChanged: (val) => setState(() => _otp = val),
             onCompleted: (val) => setState(() => _otp = val),
           ),
-        ),
-        const SizedBox(height: 24),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 24),
-          child: widget.isLoading
+          const SizedBox(height: 24),
+          widget.isLoading
               ? const Center(
                   child: CircularProgressIndicator(
                     color: AppColors.landingPrimary,
@@ -291,35 +275,35 @@ class _OtpStepState extends State<_OtpStep> {
                   label: 'Verify Email',
                   onPressed: () => widget.onNext(_otp),
                 ),
-        ),
-        const SizedBox(height: 16),
-        Center(
-          child: TextButton(
-            onPressed: widget.onChangeEmail,
-            child: RichText(
-              text: const TextSpan(
-                text: 'Wrong email?  ',
-                style: TextStyle(
-                  color: AppColors.darkMutedForeground,
-                  fontSize: 13,
-                ),
-                children: [
-                  TextSpan(
-                    text: 'Send to different email',
-                    style: TextStyle(
-                      color: AppColors.darkForeground,
-                      fontWeight: FontWeight.w700,
-                    ),
+          const SizedBox(height: 16),
+          Center(
+            child: TextButton(
+              onPressed: widget.onChangeEmail,
+              child: RichText(
+                text: const TextSpan(
+                  text: 'Wrong email?  ',
+                  style: TextStyle(
+                    color: AppColors.darkMutedForeground,
+                    fontSize: 13,
                   ),
-                ],
+                  children: [
+                    TextSpan(
+                      text: 'Send to different email',
+                      style: TextStyle(
+                        color: AppColors.darkForeground,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
           ),
-        ),
-        const Spacer(),
-        const _TermsText(),
-        const SizedBox(height: 28),
-      ],
+          const SizedBox(height: 28),
+          const _TermsText(),
+          const SizedBox(height: 28),
+        ],
+      ),
     );
   }
 }

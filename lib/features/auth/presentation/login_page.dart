@@ -1,15 +1,12 @@
 import 'package:flutter/material.dart';
-
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:go_router/go_router.dart';
 import 'package:flutter_web_auth_2/flutter_web_auth_2.dart';
+
+import '../../../app/router.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/constants/api_constants.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
-import '../../chat/presentation/chat_page.dart';
-import '../../../app/injection.dart' show sl;
 import '../bloc/auth_bloc.dart';
-import '../bloc/forgot_password_bloc.dart';
-import 'forgot_password_page.dart';
-import 'register_page.dart';
 import 'widgets/widgets.dart';
 
 class LoginPage extends StatefulWidget {
@@ -49,9 +46,7 @@ class _LoginPageState extends State<LoginPage> {
               ),
             );
           } else if (state is AuthAuthenticated) {
-            Navigator.of(context).pushReplacement(
-              MaterialPageRoute(builder: (_) => const ChatPage()),
-            );
+            context.go(AppRouter.chat);
           }
         },
         builder: (context, state) {
@@ -159,14 +154,7 @@ class _LoginPageState extends State<LoginPage> {
               // ── Forgot password ───────────────────────────────────────────────
               TextButton(
                 onPressed: () {
-                  Navigator.of(context).push(
-                    MaterialPageRoute(
-                      builder: (_) => BlocProvider(
-                        create: (_) => sl<ForgotPasswordBloc>(),
-                        child: const ForgotPasswordPage(),
-                      ),
-                    ),
-                  );
+                  context.push(AppRouter.forgotPassword);
                 },
                 child: const Text(
                   'Forgot password?',
@@ -191,11 +179,7 @@ class _LoginPageState extends State<LoginPage> {
                   ),
                   TextButton(
                     onPressed: () {
-                      Navigator.of(context).pushReplacement(
-                        MaterialPageRoute(
-                          builder: (_) => const RegisterPage(),
-                        ),
-                      );
+                      context.go(AppRouter.register);
                     },
                     child: const Text(
                       'Sign up',

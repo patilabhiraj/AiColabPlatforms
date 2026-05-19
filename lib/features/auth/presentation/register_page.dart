@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:go_router/go_router.dart';
 import 'package:flutter_web_auth_2/flutter_web_auth_2.dart';
 
+import '../../../app/router.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/constants/api_constants.dart';
-import '../../chat/presentation/chat_page.dart';
 import '../bloc/auth_bloc.dart';
-import 'login_page.dart';
 import 'widgets/widgets.dart';
 
 class RegisterPage extends StatefulWidget {
@@ -50,10 +50,7 @@ class _RegisterPageState extends State<RegisterPage> {
               ),
             );
           } else if (state is AuthAuthenticated) {
-            // Navigate to Chat Screen
-            Navigator.of(context).pushReplacement(
-              MaterialPageRoute(builder: (_) => const ChatPage()),
-            );
+            context.go(AppRouter.chat);
           }
         },
         builder: (context, state) {
@@ -201,11 +198,7 @@ class _RegisterPageState extends State<RegisterPage> {
                       ),
                       TextButton(
                         onPressed: () {
-                          Navigator.of(context).pushReplacement(
-                            MaterialPageRoute(
-                              builder: (_) => const LoginPage(),
-                            ),
-                          );
+                          context.go(AppRouter.login);
                         },
                         child: const Text(
                           'Sign in',

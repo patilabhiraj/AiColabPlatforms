@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:go_router/go_router.dart';
 
+import '../../../app/router.dart';
 import '../../../core/theme/app_colors.dart';
 import '../bloc/splash_bloc.dart';
-import 'auth_page.dart';
 import 'widgets/widgets.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -149,7 +150,7 @@ class _SplashPageState extends State<SplashPage> with TickerProviderStateMixin {
   // ── BLoC navigation listener ─────────────────────────────────────────────────
   void _handleState(BuildContext context, SplashState state) {
     if (state is SplashNavigateToHome) {
-      // TODO: GoRouter.of(context).go(RouteNames.home)
+      context.go(AppRouter.login);
     }
   }
 
@@ -199,20 +200,8 @@ class _SplashPageState extends State<SplashPage> with TickerProviderStateMixin {
                       taglineSlide: _taglineSlide,
                       buttonsOpacity: _buttonsOpacity,
                       buttonsSlide: _buttonsSlide,
-                      onCreateAccount: () {
-                        Navigator.of(context).push(
-                          MaterialPageRoute(
-                            builder: (_) => const AuthPage(isLogin: false),
-                          ),
-                        );
-                      },
-                      onSignIn: () {
-                        Navigator.of(context).push(
-                          MaterialPageRoute(
-                            builder: (_) => const AuthPage(isLogin: true),
-                          ),
-                        );
-                      },
+                      onCreateAccount: () => context.push(AppRouter.register),
+                      onSignIn: () => context.push(AppRouter.login),
                     ),
                   ),
                 ],

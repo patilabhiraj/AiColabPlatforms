@@ -11,7 +11,7 @@ abstract final class ApiConstants {
   static const String forgotPassword   = '/api/auth/forgot-password';
   static const String resetPassword    = '/api/auth/reset-password';
 
-  // Chats / Attachments
+  // Chats 
   static const String sharedChat       = '/api/chats/shared'; // append /{shareId}
   static const String downloadAttachment = '/api/attachments'; // append /{id}/download
 

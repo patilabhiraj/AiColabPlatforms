@@ -98,13 +98,16 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
                     transitionBuilder: (child, anim) => FadeTransition(
                       opacity: anim,
                       child: SlideTransition(
-                        position: Tween<Offset>(
-                          begin: const Offset(0.06, 0),
-                          end: Offset.zero,
-                        ).animate(CurvedAnimation(
-                          parent: anim,
-                          curve: Curves.easeOut,
-                        )),
+                        position:
+                            Tween<Offset>(
+                              begin: const Offset(0.06, 0),
+                              end: Offset.zero,
+                            ).animate(
+                              CurvedAnimation(
+                                parent: anim,
+                                curve: Curves.easeOut,
+                              ),
+                            ),
                         child: child,
                       ),
                     ),
@@ -115,9 +118,9 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
                           isLoading: isLoading,
                           onNext: (email) {
                             _email = email;
-                            context
-                                .read<ForgotPasswordBloc>()
-                                .add(FPSendOtpRequested(email));
+                            context.read<ForgotPasswordBloc>().add(
+                              FPSendOtpRequested(email),
+                            );
                           },
                         ),
                         _OtpStep(

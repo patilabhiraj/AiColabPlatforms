@@ -1,10 +1,13 @@
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
 import '../features/auth/presentation/login_page.dart';
 import '../features/auth/presentation/register_page.dart';
 import '../features/auth/presentation/splash_page.dart';
 import '../features/auth/presentation/forgot_password_page.dart';
+import '../features/chat/bloc/chat_bloc.dart';
 import '../features/chat/presentation/chat_page.dart';
+import 'injection.dart' show sl;
 
 class AppRouter {
   static const String splash = '/';
@@ -38,7 +41,10 @@ class AppRouter {
         ),
         GoRoute(
           path: chat,
-          builder: (context, state) => const ChatPage(),
+          builder: (context, state) => BlocProvider(
+            create: (_) => sl<ChatBloc>()..add(ChatLoadConversations()),
+            child: const ChatPage(),
+          ),
         ),
       ],
     );

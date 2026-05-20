@@ -82,7 +82,7 @@ class _ChatInputBarState extends State<ChatInputBar> {
                 keyboardType: TextInputType.multiline,
                 textInputAction: TextInputAction.newline,
                 style: const TextStyle(
-                  color: AppColors.darkForeground,
+                  color: Color.fromARGB(255, 17, 4, 4),
                   fontSize: 15,
                   height: 1.5,
                 ),

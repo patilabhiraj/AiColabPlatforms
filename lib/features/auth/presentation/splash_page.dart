@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../../app/router.dart';
+import '../../../app/routes/router.dart';
 import '../../../core/theme/app_colors.dart';
 import '../bloc/splash_bloc.dart';
 import 'widgets/widgets.dart';

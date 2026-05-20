@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import '../../../../core/theme/app_colors.dart';
 
 /// A full-width gradient primary button used on the splash screen.
-///
 /// Uses the ColabPlatforms landing brand gradient (#861043 → #530929)
 /// with a matching glow shadow beneath.
 class GradientButton extends StatelessWidget {
@@ -12,7 +11,7 @@ class GradientButton extends StatelessWidget {
     required this.label,
     required this.onPressed,
     this.height = 54.0,
-    this.borderRadius = 10.0,
+    this.borderRadius = 100.0,
   });
 
   final String label;

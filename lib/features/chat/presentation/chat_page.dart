@@ -124,7 +124,7 @@ class _ChatAppBar extends StatelessWidget implements PreferredSizeWidget {
           backgroundColor: AppColors.darkCard,
           elevation: 0,
           scrolledUnderElevation: 0,
-          surfaceTintColor: Colors.transparent,
+          surfaceTintColor: AppColors.darkCard,
           bottom: PreferredSize(
             preferredSize: const Size.fromHeight(1),
             child: Container(height: 1, color: AppColors.darkBorder),
@@ -149,8 +149,8 @@ class _ChatAppBar extends StatelessWidget implements PreferredSizeWidget {
           ),
           actions: [
             IconButton(
-              icon: const Icon(Icons.add_comment_outlined,
-                  color: AppColors.darkForeground, size: 21),
+              icon: const Icon(Icons.person_rounded,
+                  color: AppColors.darkForeground, size: 25),
               tooltip: 'New chat',
               onPressed: () =>
                   context.read<ChatBloc>().add(ChatStartNewConversation()),

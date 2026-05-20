@@ -1,9 +1,10 @@
+import 'package:colabplatforms_ai/core/widgets/custom_snackbar.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter_web_auth_2/flutter_web_auth_2.dart';
 
-import '../../../app/router.dart';
+import '../../../app/routes/router.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/constants/api_constants.dart';
 import '../bloc/auth_bloc.dart';
@@ -39,13 +40,9 @@ class _LoginPageState extends State<LoginPage> {
       body: BlocConsumer<AuthBloc, AuthState>(
         listener: (context, state) {
           if (state is AuthError) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(state.message),
-                backgroundColor: AppColors.landingPrimary,
-              ),
-            );
+            CustomSnackBar.showError(context, state.message);
           } else if (state is AuthAuthenticated) {
+            // CustomSnackBar.showSuccess(context, "Signed in successfully");
             context.go(AppRouter.chat);
           }
         },
@@ -55,149 +52,152 @@ class _LoginPageState extends State<LoginPage> {
           return SafeArea(
             child: SingleChildScrollView(
               padding: const EdgeInsets.symmetric(horizontal: 24),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              const SizedBox(height: 8),
-
-              // ── Logo ──────────────────────────────────────────────────────────
-              const Center(child: AuthLogo()),
-              const SizedBox(height: 32),
-
-              // ── Title ─────────────────────────────────────────────────────────
-              const Text(
-                'Welcome back',
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  color: AppColors.landingPrimary,
-                  fontSize: 28,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-              const SizedBox(height: 6),
-              const Text(
-                'Sign in to AI Colab Chat',
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  color: AppColors.darkMutedForeground,
-                  fontSize: 14,
-                ),
-              ),
-              const SizedBox(height: 32),
-
-              // ── Email ─────────────────────────────────────────────────────────
-              AuthTextField(
-                label: 'Email',
-                hint: 'you@example.com',
-                controller: _emailCtrl,
-                keyboardType: TextInputType.emailAddress,
-                textInputAction: TextInputAction.next,
-              ),
-              const SizedBox(height: 16),
-
-              // ── Password ──────────────────────────────────────────────────────
-              AuthTextField(
-                label: 'Password',
-                hint: '••••••••',
-                isPassword: true,
-                controller: _passwordCtrl,
-                textInputAction: TextInputAction.done,
-              ),
-              const SizedBox(height: 24),
-
-              // ── Sign in button ────────────────────────────────────────────────
-              isLoading
-                  ? const Center(
-                      child: CircularProgressIndicator(
-                        color: AppColors.landingPrimary,
-                      ),
-                    )
-                  : GradientButton(
-                      label: 'Sign in',
-                      onPressed: () {
-                        FocusScope.of(context).unfocus();
-                        context.read<AuthBloc>().add(
-                              AuthLoginRequested(
-                                email: _emailCtrl.text.trim().toLowerCase(),
-                                password: _passwordCtrl.text,
-                              ),
-                            );
-                      },
-                    ),
-              const SizedBox(height: 24),
-
-              // ── OR divider ────────────────────────────────────────────────────
-              const OrDivider(),
-              const SizedBox(height: 24),
-
-              // ── Google button ─────────────────────────────────────────────────
-              GoogleSignInButton(
-                onPressed: () async {
-                  try {
-                    final result = await FlutterWebAuth2.authenticate(
-                      url: '${ApiConstants.baseUrl}${ApiConstants.googleStart}',
-                      callbackUrlScheme: 'colabplatforms',
-                    );
-                    final token = Uri.parse(result).queryParameters['token'];
-                    if (token != null && context.mounted) {
-                      context.read<AuthBloc>().add(
-                        AuthGoogleSignInRequested(token: token),
-                      );
-                    }
-                  } catch (_) {
-                    // user cancelled
-                  }
-                },
-              ),
-              const SizedBox(height: 8),
-
-              // ── Forgot password ───────────────────────────────────────────────
-              TextButton(
-                onPressed: () {
-                  context.push(AppRouter.forgotPassword);
-                },
-                child: const Text(
-                  'Forgot password?',
-                  style: TextStyle(
-                    color: AppColors.darkForeground,
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ),
-
-              // ── Sign up link ──────────────────────────────────────────────────
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
+                  const SizedBox(height: 8),
+
+                  // ── Logo ──────────────────────────────────────────────────────────
+                  const Center(child: AuthLogo()),
+                  const SizedBox(height: 32),
+
+                  // ── Title ─────────────────────────────────────────────────────────
                   const Text(
-                    "Don't have an account?",
+                    'Welcome back',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      color: AppColors.landingPrimary,
+                      fontSize: 28,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  const Text(
+                    'Sign in to AI Colab Chat',
+                    textAlign: TextAlign.center,
                     style: TextStyle(
                       color: AppColors.darkMutedForeground,
                       fontSize: 14,
                     ),
                   ),
+                  const SizedBox(height: 32),
+
+                  // ── Email ─────────────────────────────────────────────────────────
+                  AuthTextField(
+                    label: 'Email',
+                    hint: 'you@example.com',
+                    controller: _emailCtrl,
+                    keyboardType: TextInputType.emailAddress,
+                    textInputAction: TextInputAction.next,
+                  ),
+                  const SizedBox(height: 16),
+
+                  // ── Password ──────────────────────────────────────────────────────
+                  AuthTextField(
+                    label: 'Password',
+                    hint: '••••••••',
+                    isPassword: true,
+                    controller: _passwordCtrl,
+                    textInputAction: TextInputAction.done,
+                  ),
+                  const SizedBox(height: 24),
+
+                  // ── Sign in button ────────────────────────────────────────────────
+                  isLoading
+                      ? const Center(
+                          child: CircularProgressIndicator(
+                            color: AppColors.landingPrimary,
+                          ),
+                        )
+                      : GradientButton(
+                          label: 'Sign in',
+                          onPressed: () {
+                            FocusScope.of(context).unfocus();
+                            context.read<AuthBloc>().add(
+                              AuthLoginRequested(
+                                email: _emailCtrl.text.trim().toLowerCase(),
+                                password: _passwordCtrl.text,
+                              ),
+                            );
+                          },
+                        ),
+                  const SizedBox(height: 24),
+
+                  // ── OR divider ────────────────────────────────────────────────────
+                  const OrDivider(),
+                  const SizedBox(height: 24),
+
+                  // ── Google button ─────────────────────────────────────────────────
+                  GoogleSignInButton(
+                    onPressed: () async {
+                      try {
+                        final result = await FlutterWebAuth2.authenticate(
+                          url:
+                              '${ApiConstants.baseUrl}${ApiConstants.googleStart}',
+                          callbackUrlScheme: 'colabplatforms',
+                        );
+                        final token = Uri.parse(
+                          result,
+                        ).queryParameters['token'];
+                        if (token != null && context.mounted) {
+                          context.read<AuthBloc>().add(
+                            AuthGoogleSignInRequested(token: token),
+                          );
+                        }
+                      } catch (_) {
+                        // user cancelled
+                      }
+                    },
+                  ),
+                  const SizedBox(height: 8),
+
+                  // ── Forgot password ───────────────────────────────────────────────
                   TextButton(
                     onPressed: () {
-                      context.go(AppRouter.register);
+                      context.push(AppRouter.forgotPassword);
                     },
                     child: const Text(
-                      'Sign up',
+                      'Forgot password?',
                       style: TextStyle(
                         color: AppColors.darkForeground,
                         fontSize: 14,
-                        fontWeight: FontWeight.w700,
+                        fontWeight: FontWeight.w600,
                       ),
                     ),
                   ),
+
+                  // ── Sign up link ──────────────────────────────────────────────────
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Text(
+                        "Don't have an account?",
+                        style: TextStyle(
+                          color: AppColors.darkMutedForeground,
+                          fontSize: 14,
+                        ),
+                      ),
+                      TextButton(
+                        onPressed: () {
+                          context.go(AppRouter.register);
+                        },
+                        child: const Text(
+                          'Sign up',
+                          style: TextStyle(
+                            color: AppColors.darkForeground,
+                            fontSize: 14,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 24),
                 ],
               ),
-              const SizedBox(height: 24),
-            ],
-          ),
-        ),
-      );
-    },
+            ),
+          );
+        },
       ),
     );
   }

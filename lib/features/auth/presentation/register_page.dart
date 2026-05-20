@@ -1,9 +1,11 @@
+import 'package:colabplatforms_ai/core/widgets/custom_snackbar.dart';
+import 'package:colabplatforms_ai/features/auth/presentation/register_page.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter_web_auth_2/flutter_web_auth_2.dart';
 
-import '../../../app/router.dart';
+import '../../../app/routes/router.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/constants/api_constants.dart';
 import '../bloc/auth_bloc.dart';
@@ -40,20 +42,23 @@ class _RegisterPageState extends State<RegisterPage> {
         elevation: 0,
         iconTheme: const IconThemeData(color: AppColors.darkForeground),
       ),
-      body: BlocConsumer<AuthBloc, AuthState>(
-        listener: (context, state) {
-          if (state is AuthError) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(state.message),
-                backgroundColor: AppColors.landingPrimary,
-              ),
-            );
-          } else if (state is AuthAuthenticated) {
-            context.go(AppRouter.chat);
-          }
-        },
-        builder: (context, state) {
+      body: BlocConsumer<AuthBloc, AuthState>(listener: (context, state) {
+
+  if (state is AuthError) {
+  CustomSnackBar.showError(
+    context,
+    state.message,           // ← positional
+    // backgroundColor: Colors.red,   ← Remove this line
+  );
+} else if (state is AuthAuthenticated) {
+  CustomSnackBar.showSuccess(
+    context,
+    "Account created successfully",
+  );
+  context.go(AppRouter.chat);
+}
+},
+builder: (context, state) {
           final isLoading = state is AuthLoading;
 
           return SafeArea(

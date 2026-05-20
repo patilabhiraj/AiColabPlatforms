@@ -1,37 +1,33 @@
 import 'package:flutter/material.dart';
 
-import '../../../../core/theme/app_colors.dart';
-
 class OrDivider extends StatelessWidget {
   const OrDivider({super.key});
 
   @override
   Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+
     return Row(
       children: [
-        const Expanded(
-          child: Divider(color: AppColors.darkBorder, thickness: 1),
-        ),
+        Expanded(child: Divider(color: cs.outline, thickness: 1)),
         Container(
           margin: const EdgeInsets.symmetric(horizontal: 12),
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
           decoration: BoxDecoration(
-            color: AppColors.darkBackground,
+            color: Theme.of(context).scaffoldBackgroundColor,
             borderRadius: BorderRadius.circular(4),
           ),
-          child: const Text(
+          child: Text(
             'OR CONTINUE WITH',
             style: TextStyle(
-              color: AppColors.darkMutedForeground,
+              color: cs.onSurfaceVariant,
               fontSize: 11,
               fontWeight: FontWeight.w600,
               letterSpacing: 1.2,
             ),
           ),
         ),
-        const Expanded(
-          child: Divider(color: AppColors.darkBorder, thickness: 1),
-        ),
+        Expanded(child: Divider(color: cs.outline, thickness: 1)),
       ],
     );
   }

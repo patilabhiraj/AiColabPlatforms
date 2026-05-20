@@ -1,5 +1,4 @@
 import 'package:colabplatforms_ai/core/widgets/custom_snackbar.dart';
-import 'package:colabplatforms_ai/features/auth/presentation/register_page.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
@@ -36,11 +35,10 @@ class _RegisterPageState extends State<RegisterPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.darkBackground,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
-        iconTheme: const IconThemeData(color: AppColors.darkForeground),
+        iconTheme: IconThemeData(color: Theme.of(context).colorScheme.onSurface),
       ),
       body: BlocConsumer<AuthBloc, AuthState>(listener: (context, state) {
 
@@ -84,11 +82,11 @@ builder: (context, state) {
                     ),
                   ),
                   const SizedBox(height: 6),
-                  const Text(
+                  Text(
                     'Get started with AI Colab Chat',
                     textAlign: TextAlign.center,
                     style: TextStyle(
-                      color: AppColors.darkMutedForeground,
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
                       fontSize: 14,
                     ),
                   ),
@@ -194,10 +192,10 @@ builder: (context, state) {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      const Text(
+                      Text(
                         'Already have an account?',
                         style: TextStyle(
-                          color: AppColors.darkMutedForeground,
+                          color: Theme.of(context).colorScheme.onSurfaceVariant,
                           fontSize: 14,
                         ),
                       ),
@@ -205,10 +203,10 @@ builder: (context, state) {
                         onPressed: () {
                           context.go(AppRouter.login);
                         },
-                        child: const Text(
+                        child: Text(
                           'Sign in',
                           style: TextStyle(
-                            color: AppColors.darkForeground,
+                            color: Theme.of(context).colorScheme.onSurface,
                             fontSize: 14,
                             fontWeight: FontWeight.w700,
                           ),

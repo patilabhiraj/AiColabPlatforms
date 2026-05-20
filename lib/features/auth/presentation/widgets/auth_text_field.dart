@@ -1,6 +1,4 @@
 import 'package:flutter/material.dart';
-
-import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_theme.dart';
 
 class AuthTextField extends StatefulWidget {
@@ -30,13 +28,15 @@ class _AuthTextFieldState extends State<AuthTextField> {
 
   @override
   Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
           widget.label,
-          style: const TextStyle(
-            color: AppColors.darkForeground,
+          style: TextStyle(
+            color: cs.onSurface,
             fontSize: 14,
             fontWeight: FontWeight.w500,
           ),
@@ -50,35 +50,33 @@ class _AuthTextFieldState extends State<AuthTextField> {
               ? TextCapitalization.none
               : TextCapitalization.words,
           textInputAction: widget.textInputAction,
-          style: const TextStyle(
-            color: AppColors.darkForeground,
-            fontSize: 15,
-          ),
+          style: TextStyle(color: cs.onSurface, fontSize: 15),
           decoration: InputDecoration(
             hintText: widget.hint,
-            hintStyle: const TextStyle(color: AppColors.darkMutedForeground),
+            hintStyle: TextStyle(color: cs.onSurfaceVariant),
             filled: true,
-            fillColor: AppColors.darkCard,
+            fillColor: cs.surface,
             border: OutlineInputBorder(
               borderRadius: AppRadius.borderXl,
-              borderSide: const BorderSide(color: AppColors.darkInput),
+              borderSide: BorderSide(color: cs.outline),
             ),
             enabledBorder: OutlineInputBorder(
               borderRadius: AppRadius.borderXl,
-              borderSide: const BorderSide(color: AppColors.darkInput),
+              borderSide: BorderSide(color: cs.outline),
             ),
             focusedBorder: OutlineInputBorder(
               borderRadius: AppRadius.borderXl,
-              borderSide: const BorderSide(color: AppColors.darkRing, width: 1.5),
+              borderSide: BorderSide(color: cs.outlineVariant, width: 1.5),
             ),
-            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+            contentPadding:
+                const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
             suffixIcon: widget.isPassword
                 ? IconButton(
                     icon: Icon(
                       _obscure
                           ? Icons.visibility_outlined
                           : Icons.visibility_off_outlined,
-                      color: AppColors.darkMutedForeground,
+                      color: cs.onSurfaceVariant,
                       size: 20,
                     ),
                     onPressed: () => setState(() => _obscure = !_obscure),

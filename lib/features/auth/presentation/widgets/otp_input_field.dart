@@ -27,10 +27,10 @@ class _OtpInputFieldState extends State<OtpInputField> {
   @override
   void initState() {
     super.initState();
-    _controllers = List.generate(widget.length, (_) => TextEditingController());
+    _controllers =
+        List.generate(widget.length, (_) => TextEditingController());
     _nodes = List.generate(widget.length, (_) => FocusNode());
 
-    // Handle backspace on empty box → move focus back and clear previous
     for (int i = 0; i < widget.length; i++) {
       final index = i;
       _nodes[index].onKeyEvent = (_, event) {
@@ -50,8 +50,12 @@ class _OtpInputFieldState extends State<OtpInputField> {
 
   @override
   void dispose() {
-    for (final c in _controllers) { c.dispose(); }
-    for (final f in _nodes) { f.dispose(); }
+    for (final c in _controllers) {
+      c.dispose();
+    }
+    for (final f in _nodes) {
+      f.dispose();
+    }
     super.dispose();
   }
 
@@ -65,6 +69,8 @@ class _OtpInputFieldState extends State<OtpInputField> {
 
   @override
   Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+
     return Row(
       children: List.generate(widget.length, (i) {
         return Expanded(
@@ -81,22 +87,22 @@ class _OtpInputFieldState extends State<OtpInputField> {
                   FilteringTextInputFormatter.digitsOnly,
                   LengthLimitingTextInputFormatter(1),
                 ],
-                style: const TextStyle(
-                  color: AppColors.darkForeground,
+                style: TextStyle(
+                  color: cs.onSurface,
                   fontSize: 22,
                   fontWeight: FontWeight.w600,
                 ),
                 decoration: InputDecoration(
                   counterText: '',
                   filled: true,
-                  fillColor: AppColors.darkCard,
+                  fillColor: cs.surface,
                   border: OutlineInputBorder(
                     borderRadius: AppRadius.borderMd,
-                    borderSide: const BorderSide(color: AppColors.darkInput),
+                    borderSide: BorderSide(color: cs.outline),
                   ),
                   enabledBorder: OutlineInputBorder(
                     borderRadius: AppRadius.borderMd,
-                    borderSide: const BorderSide(color: AppColors.darkInput),
+                    borderSide: BorderSide(color: cs.outline),
                   ),
                   focusedBorder: OutlineInputBorder(
                     borderRadius: AppRadius.borderMd,

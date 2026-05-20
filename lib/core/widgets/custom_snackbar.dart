@@ -68,7 +68,7 @@ class CustomSnackBar {
               color: const Color(0xFF1C1C2E),
               borderRadius: BorderRadius.circular(18),
               border: Border.all(
-                color: color.withOpacity(0.25),
+                color: color.withValues(alpha: 0.25),
               ),
             
             ),
@@ -79,7 +79,7 @@ class CustomSnackBar {
                 Container(
                   padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
-                    color: color.withOpacity(0.12),
+                    color: color.withValues(alpha: 0.12),
                     shape: BoxShape.circle,
                   ),
                   child: Icon(

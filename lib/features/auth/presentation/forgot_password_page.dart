@@ -56,8 +56,8 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
       builder: (context, state) {
         final isLoading = state is ForgotPasswordLoading;
 
+        final cs = Theme.of(context).colorScheme;
         return Scaffold(
-          backgroundColor: AppColors.darkBackground,
           appBar: _step < 3
               ? AppBar(
                   backgroundColor: Colors.transparent,
@@ -65,17 +65,17 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
                   leading: isLoading
                       ? null
                       : IconButton(
-                          icon: const Icon(
+                          icon: Icon(
                             Icons.arrow_back_ios_new_rounded,
                             size: 20,
-                            color: AppColors.darkForeground,
+                            color: cs.onSurface,
                           ),
                           onPressed: _back,
                         ),
                   title: Text(
                     _titles[_step],
-                    style: const TextStyle(
-                      color: AppColors.darkForeground,
+                    style: TextStyle(
+                      color: cs.onSurface,
                       fontSize: 16,
                       fontWeight: FontWeight.w700,
                     ),
@@ -246,17 +246,17 @@ class _OtpStepState extends State<_OtpStep> {
           Text(
             'We just sent a 6-digit code to\n${widget.email.isEmpty ? 'your email' : widget.email},\nenter it below:',
             textAlign: TextAlign.center,
-            style: const TextStyle(
-              color: AppColors.darkMutedForeground,
+            style: TextStyle(
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
               fontSize: 14,
               height: 1.55,
             ),
           ),
           const SizedBox(height: 28),
-          const Text(
+          Text(
             'Code',
             style: TextStyle(
-              color: AppColors.darkForeground,
+              color: Theme.of(context).colorScheme.onSurface,
               fontSize: 14,
               fontWeight: FontWeight.w500,
             ),
@@ -283,17 +283,17 @@ class _OtpStepState extends State<_OtpStep> {
             child: TextButton(
               onPressed: widget.onChangeEmail,
               child: RichText(
-                text: const TextSpan(
+                text: TextSpan(
                   text: 'Wrong email?  ',
                   style: TextStyle(
-                    color: AppColors.darkMutedForeground,
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
                     fontSize: 13,
                   ),
                   children: [
                     TextSpan(
                       text: 'Send to different email',
                       style: TextStyle(
-                        color: AppColors.darkForeground,
+                        color: Theme.of(context).colorScheme.onSurface,
                         fontWeight: FontWeight.w700,
                       ),
                     ),
@@ -398,22 +398,22 @@ class _SuccessStep extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 28),
-          const Text(
+          Text(
             'Password reset\nsuccessfully!',
             textAlign: TextAlign.center,
             style: TextStyle(
-              color: AppColors.darkForeground,
+              color: Theme.of(context).colorScheme.onSurface,
               fontSize: 26,
               fontWeight: FontWeight.w700,
               height: 1.3,
             ),
           ),
           const SizedBox(height: 12),
-          const Text(
+          Text(
             'Your password has been updated.\nSign in with your new password to continue.',
             textAlign: TextAlign.center,
             style: TextStyle(
-              color: AppColors.darkMutedForeground,
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
               fontSize: 14,
               height: 1.55,
             ),
@@ -436,10 +436,10 @@ class _TermsText extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 24),
       child: RichText(
         textAlign: TextAlign.center,
-        text: const TextSpan(
+        text: TextSpan(
           text: 'By using ColabPlatforms AI, you agree to the\n',
           style: TextStyle(
-            color: AppColors.darkMutedForeground,
+            color: Theme.of(context).colorScheme.onSurfaceVariant,
             fontSize: 12,
             height: 1.5,
           ),
@@ -447,19 +447,19 @@ class _TermsText extends StatelessWidget {
             TextSpan(
               text: 'Terms',
               style: TextStyle(
-                color: AppColors.darkForeground,
+                color: Theme.of(context).colorScheme.onSurface,
                 fontWeight: FontWeight.w600,
               ),
             ),
-            TextSpan(text: ' and '),
+            const TextSpan(text: ' and '),
             TextSpan(
               text: 'Privacy Policy',
               style: TextStyle(
-                color: AppColors.darkForeground,
+                color: Theme.of(context).colorScheme.onSurface,
                 fontWeight: FontWeight.w600,
               ),
             ),
-            TextSpan(text: '.'),
+            const TextSpan(text: '.'),
           ],
         ),
       ),

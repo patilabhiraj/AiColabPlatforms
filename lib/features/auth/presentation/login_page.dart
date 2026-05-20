@@ -31,11 +31,10 @@ class _LoginPageState extends State<LoginPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.darkBackground,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
-        iconTheme: const IconThemeData(color: AppColors.darkForeground),
+        iconTheme: IconThemeData(color: Theme.of(context).colorScheme.onSurface),
       ),
       body: BlocConsumer<AuthBloc, AuthState>(
         listener: (context, state) {
@@ -72,11 +71,11 @@ class _LoginPageState extends State<LoginPage> {
                     ),
                   ),
                   const SizedBox(height: 6),
-                  const Text(
+                  Text(
                     'Sign in to AI Colab Chat',
                     textAlign: TextAlign.center,
                     style: TextStyle(
-                      color: AppColors.darkMutedForeground,
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
                       fontSize: 14,
                     ),
                   ),
@@ -156,10 +155,10 @@ class _LoginPageState extends State<LoginPage> {
                     onPressed: () {
                       context.push(AppRouter.forgotPassword);
                     },
-                    child: const Text(
+                    child: Text(
                       'Forgot password?',
                       style: TextStyle(
-                        color: AppColors.darkForeground,
+                        color: Theme.of(context).colorScheme.onSurface,
                         fontSize: 14,
                         fontWeight: FontWeight.w600,
                       ),
@@ -170,10 +169,10 @@ class _LoginPageState extends State<LoginPage> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      const Text(
+                      Text(
                         "Don't have an account?",
                         style: TextStyle(
-                          color: AppColors.darkMutedForeground,
+                          color: Theme.of(context).colorScheme.onSurfaceVariant,
                           fontSize: 14,
                         ),
                       ),
@@ -181,10 +180,10 @@ class _LoginPageState extends State<LoginPage> {
                         onPressed: () {
                           context.go(AppRouter.register);
                         },
-                        child: const Text(
+                        child: Text(
                           'Sign up',
                           style: TextStyle(
-                            color: AppColors.darkForeground,
+                            color: Theme.of(context).colorScheme.onSurface,
                             fontSize: 14,
                             fontWeight: FontWeight.w700,
                           ),

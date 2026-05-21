@@ -1,7 +1,12 @@
 import 'package:flutter/material.dart';
 import '../../../../core/theme/app_colors.dart';
-import '../../../../core/theme/app_theme.dart';
 
+/// Claude-style Chat Input Bar
+/// Features:
+/// - Model selector pill (center)
+/// - Attachment button (left)
+/// - Voice/Audio button (right)
+/// - Clean, minimal design
 class ChatInputBar extends StatefulWidget {
   const ChatInputBar({super.key, required this.onSend, this.enabled = true});
   final ValueChanged<String> onSend;
@@ -11,11 +16,14 @@ class ChatInputBar extends StatefulWidget {
   State<ChatInputBar> createState() => _ChatInputBarState();
 }
 
-class _ChatInputBarState extends State<ChatInputBar> {
+class _ChatInputBarState extends State<ChatInputBar> with SingleTickerProviderStateMixin {
   final _ctrl = TextEditingController();
   final _focusNode = FocusNode();
   bool _hasText = false;
   bool _isFocused = false;
+  String _selectedModel = 'Sonnet 4.6';
+  late AnimationController _animCtrl;
+  late Animation<double> _scaleAnim;
 
   @override
   void initState() {
@@ -27,53 +35,72 @@ class _ChatInputBarState extends State<ChatInputBar> {
     _focusNode.addListener(() {
       setState(() => _isFocused = _focusNode.hasFocus);
     });
+    
+    _animCtrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 200),
+    );
+    _scaleAnim = Tween<double>(begin: 1.0, end: 0.95).animate(
+      CurvedAnimation(parent: _animCtrl, curve: Curves.easeInOut),
+    );
   }
 
   @override
   void dispose() {
     _ctrl.dispose();
     _focusNode.dispose();
+    _animCtrl.dispose();
     super.dispose();
   }
 
   void _send() {
     final text = _ctrl.text.trim();
     if (text.isEmpty || !widget.enabled) return;
+    _animCtrl.forward().then((_) => _animCtrl.reverse());
     _ctrl.clear();
     widget.onSend(text);
+  }
+
+  void _showModelSelector() {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (context) => _ModelSelectorSheet(
+        selectedModel: _selectedModel,
+        onSelect: (model) {
+          setState(() => _selectedModel = model);
+          Navigator.pop(context);
+        },
+      ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     final bottomPad = MediaQuery.viewPaddingOf(context).bottom;
+    
     return Container(
-      color: AppColors.darkBackground,
-      padding: EdgeInsets.fromLTRB(12, 8, 12, bottomPad > 0 ? bottomPad : 12),
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
+      decoration: const BoxDecoration(
+        color: AppColors.darkBackground,
+      ),
+      padding: EdgeInsets.fromLTRB(16, 16, 16, bottomPad > 0 ? bottomPad + 8 : 16),
+      child: Container(
         decoration: BoxDecoration(
-          color: AppColors.darkCard,
-          borderRadius: AppRadius.borderXl,
+          color: AppColors.darkCard.withValues(alpha: 0.4),
+          borderRadius: BorderRadius.circular(28),
           border: Border.all(
             color: _isFocused
-                ? AppColors.landingPrimary.withValues(alpha: 0.55)
-                : AppColors.darkBorder,
-            width: _isFocused ? 1.5 : 1.0,
+                ? AppColors.darkBorder.withValues(alpha: 0.35)
+                : AppColors.darkBorder.withValues(alpha: 0.2),
+            width: 1,
           ),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.15),
-              blurRadius: 12,
-              offset: const Offset(0, -2),
-            ),
-          ],
         ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            // ── Text field ───────────────────────────────────────────────────
+            // ── Text field ─────────────────────────────────────────────────
             ConstrainedBox(
-              constraints: const BoxConstraints(maxHeight: 150),
+              constraints: const BoxConstraints(maxHeight: 120),
               child: TextField(
                 controller: _ctrl,
                 focusNode: _focusNode,
@@ -82,87 +109,284 @@ class _ChatInputBarState extends State<ChatInputBar> {
                 keyboardType: TextInputType.multiline,
                 textInputAction: TextInputAction.newline,
                 style: const TextStyle(
-                  color: Color.fromARGB(255, 17, 4, 4),
+                  color: AppColors.darkForeground,
                   fontSize: 15,
-                  height: 1.5,
+                  height: 1.4,
                 ),
                 decoration: InputDecoration(
                   hintText: widget.enabled
-                      ? 'Message AI Colab...'
+                      ? 'Chat with Claude...'
                       : 'AI is thinking…',
                   hintStyle: TextStyle(
-                    color: AppColors.darkMutedForeground
-                        .withValues(alpha: widget.enabled ? 1.0 : 0.5),
+                    color: AppColors.darkMutedForeground.withValues(alpha: 0.45),
                     fontSize: 15,
                   ),
+                  filled: false,
+                  fillColor: Colors.transparent,
                   border: InputBorder.none,
                   enabledBorder: InputBorder.none,
                   focusedBorder: InputBorder.none,
                   disabledBorder: InputBorder.none,
-                  contentPadding: const EdgeInsets.fromLTRB(16, 14, 16, 4),
+                  contentPadding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
                 ),
               ),
             ),
 
-            // ── Bottom row: actions + send ───────────────────────────────────
+            // ── Bottom action row ──────────────────────────────────────────
             Padding(
-              padding: const EdgeInsets.fromLTRB(6, 0, 8, 8),
+              padding: const EdgeInsets.fromLTRB(14, 0, 14, 12),
               child: Row(
                 children: [
-                  IconButton(
-                    onPressed: null,
-                    icon: const Icon(
-                      Icons.add_circle_outline_rounded,
-                      color: AppColors.darkMutedForeground,
-                      size: 21,
-                    ),
-                    padding: EdgeInsets.zero,
-                    constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
-                    tooltip: 'Attach',
+                  // Attachment button
+                  _IconButton(
+                    icon: Icons.add_rounded,
+                    onTap: widget.enabled ? () {} : null,
                   ),
+                  
                   const Spacer(),
-                  // Send / loading button
-                  AnimatedContainer(
-                    duration: const Duration(milliseconds: 200),
-                    width: 36,
-                    height: 36,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: (_hasText && widget.enabled)
-                          ? AppColors.landingPrimary
-                          : AppColors.darkMuted,
-                    ),
-                    child: Material(
-                      color: Colors.transparent,
-                      shape: const CircleBorder(),
-                      child: InkWell(
-                        customBorder: const CircleBorder(),
-                        onTap: _hasText && widget.enabled ? _send : null,
-                        child: Center(
-                          child: !widget.enabled
-                              ? const SizedBox(
-                                  width: 16,
-                                  height: 16,
-                                  child: CircularProgressIndicator(
-                                    strokeWidth: 2,
-                                    color: AppColors.darkMutedForeground,
-                                  ),
-                                )
-                              : Icon(
-                                  Icons.arrow_upward_rounded,
-                                  size: 18,
-                                  color: _hasText
-                                      ? Colors.white
-                                      : AppColors.darkMutedForeground,
-                                ),
+                  
+                  // Model selector pill (center)
+                  GestureDetector(
+                    onTap: widget.enabled ? _showModelSelector : null,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 9),
+                      decoration: BoxDecoration(
+                        color: AppColors.darkBackground.withValues(alpha: 0.85),
+                        borderRadius: BorderRadius.circular(22),
+                        border: Border.all(
+                          color: AppColors.darkBorder.withValues(alpha: 0.2),
+                          width: 1,
                         ),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            _selectedModel,
+                            style: TextStyle(
+                              color: AppColors.darkForeground.withValues(alpha: 0.95),
+                              fontSize: 13,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            'Adaptive',
+                            style: TextStyle(
+                              color: AppColors.darkMutedForeground.withValues(alpha: 0.6),
+                              fontSize: 12,
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                   ),
+                  
+                  const Spacer(),
+                  
+                  // Voice/Send button
+                  if (!_hasText)
+                    _IconButton(
+                      icon: Icons.graphic_eq_rounded,
+                      onTap: widget.enabled ? () {} : null,
+                    )
+                  else
+                    ScaleTransition(
+                      scale: _scaleAnim,
+                      child: GestureDetector(
+                        onTap: _send,
+                        child: Container(
+                          width: 38,
+                          height: 38,
+                          decoration: const BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: AppColors.darkForeground,
+                          ),
+                          child: const Icon(
+                            Icons.arrow_upward_rounded,
+                            color: AppColors.darkBackground,
+                            size: 20,
+                          ),
+                        ),
+                      ),
+                    ),
                 ],
               ),
             ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+// ── Icon Button ───────────────────────────────────────────────────────────────
+class _IconButton extends StatelessWidget {
+  const _IconButton({
+    required this.icon,
+    this.onTap,
+  });
+
+  final IconData icon;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: 38,
+        height: 38,
+        decoration: const BoxDecoration(
+          shape: BoxShape.circle,
+          color: Colors.transparent,
+        ),
+        child: Icon(
+          icon,
+          color: onTap != null
+              ? AppColors.darkMutedForeground.withValues(alpha: 0.75)
+              : AppColors.darkMutedForeground.withValues(alpha: 0.35),
+          size: 24,
+        ),
+      ),
+    );
+  }
+}
+
+// ── Model Selector Sheet ──────────────────────────────────────────────────────
+class _ModelSelectorSheet extends StatelessWidget {
+  const _ModelSelectorSheet({
+    required this.selectedModel,
+    required this.onSelect,
+  });
+
+  final String selectedModel;
+  final ValueChanged<String> onSelect;
+
+  static const _models = [
+    ('Sonnet 4.6', 'Most capable model'),
+    ('Sonnet 3.5', 'Fast and efficient'),
+    ('Opus 3', 'Maximum intelligence'),
+    ('Haiku 3', 'Lightning fast'),
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: const BoxDecoration(
+        color: AppColors.darkCard,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      padding: const EdgeInsets.fromLTRB(20, 20, 20, 32),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Handle bar
+          Center(
+            child: Container(
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                color: AppColors.darkMutedForeground.withValues(alpha: 0.3),
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+          ),
+          const SizedBox(height: 20),
+          
+          const Text(
+            'Select Model',
+            style: TextStyle(
+              color: AppColors.darkForeground,
+              fontSize: 18,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          const SizedBox(height: 16),
+          
+          ..._models.map((model) => _ModelTile(
+            name: model.$1,
+            description: model.$2,
+            isSelected: model.$1 == selectedModel,
+            onTap: () => onSelect(model.$1),
+          )),
+        ],
+      ),
+    );
+  }
+}
+
+// ── Model Tile ────────────────────────────────────────────────────────────────
+class _ModelTile extends StatelessWidget {
+  const _ModelTile({
+    required this.name,
+    required this.description,
+    required this.isSelected,
+    required this.onTap,
+  });
+
+  final String name;
+  final String description;
+  final bool isSelected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(12),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          margin: const EdgeInsets.only(bottom: 8),
+          decoration: BoxDecoration(
+            color: isSelected
+                ? AppColors.landingPrimary.withValues(alpha: 0.1)
+                : Colors.transparent,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+              color: isSelected
+                  ? AppColors.landingPrimary.withValues(alpha: 0.3)
+                  : AppColors.darkBorder.withValues(alpha: 0.2),
+            ),
+          ),
+          child: Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      name,
+                      style: TextStyle(
+                        color: isSelected
+                            ? AppColors.landingPrimary
+                            : AppColors.darkForeground,
+                        fontSize: 15,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      description,
+                      style: TextStyle(
+                        color: AppColors.darkMutedForeground.withValues(alpha: 0.7),
+                        fontSize: 13,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              if (isSelected)
+                const Icon(
+                  Icons.check_circle_rounded,
+                  color: AppColors.landingPrimary,
+                  size: 20,
+                ),
+            ],
+          ),
         ),
       ),
     );

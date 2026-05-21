@@ -39,79 +39,141 @@ class _ChatPageState extends State<ChatPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.darkBackground,
+      backgroundColor: Colors.transparent,
+      extendBodyBehindAppBar: true,
       drawer: const ChatDrawer(),
-      appBar: _ChatAppBar(),
-      body: BlocConsumer<ChatBloc, ChatState>(
-        listener: (context, state) {
-          if (state is ChatLoaded) _scrollToBottom();
-        },
-        builder: (context, state) {
-          if (state is ChatLoading) {
-            return const Center(
-              child: CircularProgressIndicator(
-                color: AppColors.landingPrimary,
-                strokeWidth: 2.5,
-              ),
-            );
-          }
+      body: Container(
+        decoration: BoxDecoration(
+          gradient: RadialGradient(
+            center: Alignment.topRight,
+            radius: 1.2,
+            colors: [
+              AppColors.landingPrimary.withValues(alpha: 0.05),
+              AppColors.darkBackground,
+              AppColors.darkBackground,
+            ],
+            stops: const [0.0, 0.4, 1.0],
+          ),
+        ),
+        child: SafeArea(
+          child: Column(
+            children: [
+              // Custom Header (replaces AppBar)
+              _CustomHeader(),
+              
+              // Chat Content
+              Expanded(
+                child: BlocConsumer<ChatBloc, ChatState>(
+                  listener: (context, state) {
+                    if (state is ChatLoaded) _scrollToBottom();
+                  },
+                  builder: (context, state) {
+                    if (state is ChatLoading) {
+                      return Center(
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Container(
+                              width: 60,
+                              height: 60,
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                gradient: LinearGradient(
+                                  colors: [
+                                    AppColors.landingPrimary.withValues(alpha: 0.2),
+                                    AppColors.landingPrimary.withValues(alpha: 0.1),
+                                  ],
+                                ),
+                              ),
+                              child: const CircularProgressIndicator(
+                                color: AppColors.landingPrimary,
+                                strokeWidth: 3,
+                              ),
+                            ),
+                            const SizedBox(height: 16),
+                            Text(
+                              'Loading...',
+                              style: TextStyle(
+                                color: AppColors.darkMutedForeground.withValues(alpha: 0.8),
+                                fontSize: 14,
+                              ),
+                            ),
+                          ],
+                        ),
+                      );
+                    }
 
-          if (state is ChatError) {
-            return Center(
-              child: Padding(
-                padding: const EdgeInsets.all(32),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const Icon(Icons.error_outline_rounded,
-                        color: AppColors.darkMutedForeground, size: 40),
-                    const SizedBox(height: 12),
-                    Text(
-                      state.message,
-                      textAlign: TextAlign.center,
-                      style: const TextStyle(
-                          color: AppColors.darkMutedForeground, fontSize: 14),
-                    ),
-                  ],
+                    if (state is ChatError) {
+                      return Center(
+                        child: Padding(
+                          padding: const EdgeInsets.all(32),
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Container(
+                                width: 60,
+                                height: 60,
+                                decoration: BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  color: AppColors.darkDestructive.withValues(alpha: 0.1),
+                                ),
+                                child: const Icon(
+                                  Icons.error_outline_rounded,
+                                  color: AppColors.darkDestructive,
+                                  size: 32,
+                                ),
+                              ),
+                              const SizedBox(height: 16),
+                              Text(
+                                state.message,
+                                textAlign: TextAlign.center,
+                                style: const TextStyle(
+                                  color: AppColors.darkForeground,
+                                  fontSize: 15,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      );
+                    }
+
+                    if (state is! ChatLoaded) return const SizedBox();
+
+                    return Column(
+                      children: [
+                        Expanded(
+                          child: state.messages.isEmpty && !state.isSending
+                              ? ChatEmptyState(
+                                  onSuggestion: (text) =>
+                                      context.read<ChatBloc>().add(ChatSendMessage(text)),
+                                )
+                              : _MessagesList(
+                                  messages: state.messages,
+                                  isSending: state.isSending,
+                                  scrollCtrl: _scrollCtrl,
+                                ),
+                        ),
+                        ChatInputBar(
+                          enabled: !state.isSending,
+                          onSend: (text) =>
+                              context.read<ChatBloc>().add(ChatSendMessage(text)),
+                        ),
+                      ],
+                    );
+                  },
                 ),
               ),
-            );
-          }
-
-          if (state is! ChatLoaded) return const SizedBox();
-
-          return Column(
-            children: [
-              Expanded(
-                child: state.messages.isEmpty && !state.isSending
-                    ? ChatEmptyState(
-                        onSuggestion: (text) =>
-                            context.read<ChatBloc>().add(ChatSendMessage(text)),
-                      )
-                    : _MessagesList(
-                        messages: state.messages,
-                        isSending: state.isSending,
-                        scrollCtrl: _scrollCtrl,
-                      ),
-              ),
-              ChatInputBar(
-                enabled: !state.isSending,
-                onSend: (text) =>
-                    context.read<ChatBloc>().add(ChatSendMessage(text)),
-              ),
             ],
-          );
-        },
+          ),
+        ),
       ),
     );
   }
 }
 
-// ── AppBar ────────────────────────────────────────────────────────────────────
-class _ChatAppBar extends StatelessWidget implements PreferredSizeWidget {
-  @override
-  Size get preferredSize => const Size.fromHeight(kToolbarHeight);
-
+// ── Custom Header (Replaces AppBar) ──────────────────────────────────────────
+class _CustomHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return BlocBuilder<ChatBloc, ChatState>(
@@ -120,43 +182,110 @@ class _ChatAppBar extends StatelessWidget implements PreferredSizeWidget {
             ? (state.selectedConversation?.title ?? 'AI Colab')
             : 'AI Colab';
 
-        return AppBar(
-          backgroundColor: AppColors.darkCard,
-          elevation: 0,
-          scrolledUnderElevation: 0,
-          surfaceTintColor: AppColors.darkCard,
-          bottom: PreferredSize(
-            preferredSize: const Size.fromHeight(1),
-            child: Container(height: 1, color: AppColors.darkBorder),
-          ),
-          leading: Builder(
-            builder: (ctx) => IconButton(
-              icon: const Icon(Icons.menu_rounded,
-                  color: AppColors.darkForeground, size: 22),
-              onPressed: () => Scaffold.of(ctx).openDrawer(),
+        return Container(
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              colors: [
+                AppColors.darkBackground.withValues(alpha: 0.95),
+                AppColors.darkBackground.withValues(alpha: 0.0),
+              ],
             ),
           ),
-          title: Text(
-            title,
-            style: const TextStyle(
-              color: AppColors.darkForeground,
-              fontSize: 15,
-              fontWeight: FontWeight.w600,
-              letterSpacing: -0.2,
-            ),
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
+          child: Row(
+            children: [
+              // Menu button
+              Builder(
+                builder: (ctx) => IconButton(
+                  icon: Container(
+                    width: 40,
+                    height: 40,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      // color: AppColors.darkCard.withValues(alpha: 0.4),
+                      border: Border.all(
+                        // color: AppColors.darkBorder.withValues(alpha: 0.3),
+                      ),
+                    ),
+                    child: const Icon(
+                      Icons.menu_rounded,
+                      color: AppColors.darkForeground,
+                      size: 22,
+                    ),
+                  ),
+                  onPressed: () => Scaffold.of(ctx).openDrawer(),
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(),
+                ),
+              ),
+              const SizedBox(width: 12),
+              
+              // Logo and title
+              Container(
+                width: 36,
+                height: 36,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  gradient: LinearGradient(
+                    colors: [
+                      AppColors.landingPrimary.withValues(alpha: 0.15),
+                      AppColors.landingPrimary.withValues(alpha: 0.08),
+                    ],
+                  ),
+                  border: Border.all(
+                    color: AppColors.landingPrimary.withValues(alpha: 0.3),
+                  ),
+                ),
+                child: const Icon(
+                  Icons.auto_awesome_rounded,
+                  color: AppColors.landingPrimary,
+                  size: 18,
+                ),
+              ),
+              const SizedBox(width: 12),
+              
+              Expanded(
+                child: Text(
+                  title,
+                  style: const TextStyle(
+                    color: AppColors.darkForeground,
+                    fontSize: 17,
+                    fontWeight: FontWeight.w600,
+                    letterSpacing: -0.3,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+              
+              // New chat button
+              IconButton(
+                icon: Container(
+                  width: 40,
+                  height: 40,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: AppColors.darkCard.withValues(alpha: 0.4),
+                    border: Border.all(
+                      color: AppColors.darkBorder.withValues(alpha: 0.3),
+                    ),
+                  ),
+                  child: const Icon(
+                    Icons.add_rounded,
+                    color: AppColors.darkForeground,
+                    size: 22,
+                  ),
+                ),
+                tooltip: 'New chat',
+                onPressed: () =>
+                    context.read<ChatBloc>().add(ChatStartNewConversation()),
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints(),
+              ),
+            ],
           ),
-          actions: [
-            IconButton(
-              icon: const Icon(Icons.person_rounded,
-                  color: AppColors.darkForeground, size: 25),
-              tooltip: 'New chat',
-              onPressed: () =>
-                  context.read<ChatBloc>().add(ChatStartNewConversation()),
-            ),
-            const SizedBox(width: 4),
-          ],
         );
       },
     );

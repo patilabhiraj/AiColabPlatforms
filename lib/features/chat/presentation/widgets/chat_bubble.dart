@@ -39,11 +39,14 @@ class _UserBubble extends StatelessWidget {
                 decoration: BoxDecoration(
                   gradient: const LinearGradient(
                     begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: [
-                      AppColors.landingPrimary,
-                      AppColors.landingPrimaryHover,
+                    end: Alignment.bottomRight,colors: [
+                      Color(0xFF0F0308),
+                      Color(0xFF1B030D),
                     ],
+                    // colors: [
+                    //   AppColors.landingPrimary,
+                    //   AppColors.landingPrimaryHover,
+                    // ],
                   ),
                   borderRadius: const BorderRadius.only(
                     topLeft: Radius.circular(20),
@@ -54,7 +57,7 @@ class _UserBubble extends StatelessWidget {
                   boxShadow: [
                     BoxShadow(
                       color: AppColors.landingPrimary.withValues(alpha: 0.3),
-                      blurRadius: 12,
+                      // blurRadius: 12,
                       offset: const Offset(0, 4),
                     ),
                   ],

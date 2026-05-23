@@ -9,8 +9,12 @@ class ChatConversationModel extends ChatConversation {
   });
 
   factory ChatConversationModel.fromJson(Map<String, dynamic> json) {
+    // Handle both integer and string IDs
+    final dynamic idValue = json['_id'] ?? json['id'];
+    final String id = idValue != null ? idValue.toString() : '';
+    
     return ChatConversationModel(
-      id: json['_id'] ?? json['id'] ?? '',
+      id: id,
       title: json['title'] ?? 'New Chat',
       lastMessage: json['lastMessage'] ?? '',
       updatedAt: DateTime.tryParse(json['updatedAt'] ?? '') ?? DateTime.now(),

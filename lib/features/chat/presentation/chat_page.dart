@@ -1,4 +1,3 @@
-import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -379,7 +378,7 @@ class _FloatingButton extends StatelessWidget {
           height: 40,
           decoration: BoxDecoration(
             shape: BoxShape.circle,
-            color: AppColors.darkCard.withValues(alpha: 0.5),
+            color: const Color.fromARGB(255, 1, 1, 31).withValues(alpha: 0.5),
             // border: Border.all(
             //   color: AppColors.darkBorder.withValues(alpha: 0.4),
             //   width: 1,

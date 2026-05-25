@@ -11,13 +11,19 @@ class ChatLoaded extends ChatState {
   final ChatConversation? selectedConversation;
   final List<ChatMessage> messages;
   final bool isSending;
+  final String? streamingContent;
+  final String? streamingMessageId;
 
   ChatLoaded({
     required this.conversations,
     this.selectedConversation,
     this.messages = const [],
     this.isSending = false,
+    this.streamingContent,
+    this.streamingMessageId,
   });
+
+  bool get isStreaming => streamingContent != null;
 
   ChatLoaded copyWith({
     List<ChatConversation>? conversations,
@@ -25,6 +31,9 @@ class ChatLoaded extends ChatState {
     bool clearConversation = false,
     List<ChatMessage>? messages,
     bool? isSending,
+    String? streamingContent,
+    bool clearStreaming = false,
+    String? streamingMessageId,
   }) {
     return ChatLoaded(
       conversations: conversations ?? this.conversations,
@@ -33,6 +42,8 @@ class ChatLoaded extends ChatState {
           : selectedConversation ?? this.selectedConversation,
       messages: messages ?? this.messages,
       isSending: isSending ?? this.isSending,
+      streamingContent: clearStreaming ? null : (streamingContent ?? this.streamingContent),
+      streamingMessageId: clearStreaming ? null : (streamingMessageId ?? this.streamingMessageId),
     );
   }
 }

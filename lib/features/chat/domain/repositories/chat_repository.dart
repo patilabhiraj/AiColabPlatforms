@@ -12,6 +12,9 @@ abstract class ChatRepository {
   Future<Either<Failure, ChatMessage>> sendMessage(String conversationId, String content);
   Future<Either<Failure, ChatConversation>> createConversation(String firstMessage);
   
+  // Streaming method for real-time responses
+  Stream<Either<Failure, String>> sendMessageStream(String conversationId, String content);
+  
   // New API methods
   /// GET /api/chats - List all chats
   Future<Either<Failure, List<ChatConversation>>> listChats();

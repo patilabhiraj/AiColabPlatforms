@@ -21,7 +21,6 @@ class _ChatInputBarState extends State<ChatInputBar> with SingleTickerProviderSt
   final _focusNode = FocusNode();
   bool _hasText = false;
   bool _isFocused = false;
-  String _selectedModel = 'Sonnet 4.6';
   late AnimationController _animCtrl;
   late Animation<double> _scaleAnim;
 
@@ -61,19 +60,6 @@ class _ChatInputBarState extends State<ChatInputBar> with SingleTickerProviderSt
     widget.onSend(text);
   }
 
-  void _showModelSelector() {
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: Colors.transparent,
-      builder: (context) => _ModelSelectorSheet(
-        selectedModel: _selectedModel,
-        onSelect: (model) {
-          setState(() => _selectedModel = model);
-          Navigator.pop(context);
-        },
-      ),
-    );
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -144,46 +130,7 @@ class _ChatInputBarState extends State<ChatInputBar> with SingleTickerProviderSt
                   ),
                   
                   const Spacer(),
-                  
-                  // Model selector pill (center)
-                  GestureDetector(
-                    onTap: widget.enabled ? _showModelSelector : null,
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 9),
-                      decoration: BoxDecoration(
-                        color: AppColors.darkBackground.withValues(alpha: 0.85),
-                        borderRadius: BorderRadius.circular(22),
-                        border: Border.all(
-                          color: AppColors.darkBorder.withValues(alpha: 0.2),
-                          width: 1,
-                        ),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text(
-                            _selectedModel,
-                            style: TextStyle(
-                              color: AppColors.darkForeground.withValues(alpha: 0.95),
-                              fontSize: 13,
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          Text(
-                            'Adaptive',
-                            style: TextStyle(
-                              color: AppColors.darkMutedForeground.withValues(alpha: 0.6),
-                              fontSize: 12,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                  
-                  const Spacer(),
-                  
+                                    
                   // Voice/Send button
                   if (!_hasText)
                     _IconButton(

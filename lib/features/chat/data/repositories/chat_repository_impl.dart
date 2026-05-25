@@ -50,6 +50,17 @@ class ChatRepositoryImpl implements ChatRepository {
   }
 
   @override
+  Stream<Either<Failure, String>> sendMessageStream(String conversationId, String content) async* {
+    try {
+      await for (final token in remoteDataSource.sendMessageStream(conversationId, content)) {
+        yield Right(token);
+      }
+    } catch (e) {
+      yield Left(ServerFailure(e.toString()));
+    }
+  }
+
+  @override
   Future<Either<Failure, SharedChat>> getSharedChat(String shareId) async {
     try {
       final sharedChat = await remoteDataSource.getSharedChat(shareId);

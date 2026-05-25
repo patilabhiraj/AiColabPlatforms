@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../core/theme/app_colors.dart';
+import '../domain/entities/chat_message.dart';
 import '../bloc/chat_bloc.dart';
 import 'widgets/chat_bubble.dart';
 import 'widgets/chat_drawer.dart';
@@ -139,21 +140,23 @@ class _ChatPageState extends State<ChatPage> {
                       return Column(
                         children: [
                           Expanded(
-                            child: state.messages.isEmpty && !state.isSending
+                            child: state.messages.isEmpty && !state.isSending && !state.isStreaming
                                 ? ChatEmptyState(
                                     onSuggestion: (text) =>
-                                        context.read<ChatBloc>().add(ChatSendMessage(text)),
+                                        context.read<ChatBloc>().add(ChatSendMessageStreaming(text)),
                                   )
                                 : _MessagesList(
                                     messages: state.messages,
                                     isSending: state.isSending,
+                                    isStreaming: state.isStreaming,
+                                    streamingContent: state.streamingContent ?? '',
                                     scrollCtrl: _scrollCtrl,
                                   ),
                           ),
                           ChatInputBar(
-                            enabled: !state.isSending,
+                            enabled: !state.isSending && !state.isStreaming,
                             onSend: (text) =>
-                                context.read<ChatBloc>().add(ChatSendMessage(text)),
+                                context.read<ChatBloc>().add(ChatSendMessageStreaming(text)),
                           ),
                         ],
                       );
@@ -400,26 +403,51 @@ class _MessagesList extends StatelessWidget {
   const _MessagesList({
     required this.messages,
     required this.isSending,
+    required this.isStreaming,
+    required this.streamingContent,
     required this.scrollCtrl,
   });
 
   final List messages;
   final bool isSending;
+  final bool isStreaming;
+  final String streamingContent;
   final ScrollController scrollCtrl;
 
   @override
   Widget build(BuildContext context) {
-    final itemCount = messages.length + (isSending ? 1 : 0);
+    final itemCount = messages.length + (isStreaming ? 1 : (isSending ? 1 : 0));
 
     return ListView.builder(
       controller: scrollCtrl,
       padding: const EdgeInsets.fromLTRB(14, 16, 14, 12),
       itemCount: itemCount,
       itemBuilder: (context, index) {
-        if (index == messages.length && isSending) {
-          return const TypingIndicator();
+        if (index == messages.length) {
+          if (isStreaming) {
+            // Show streaming message
+            return ChatBubble(
+              message: ChatMessage(
+                id: 'streaming',
+                content: streamingContent,
+                isUser: false,
+                timestamp: DateTime.now(),
+              ),
+              isStreaming: true,
+              onQuestionTap: (question) {
+                context.read<ChatBloc>().add(ChatSendMessageStreaming(question));
+              },
+            );
+          } else if (isSending) {
+            return const TypingIndicator();
+          }
         }
-        return ChatBubble(message: messages[index]);
+        return ChatBubble(
+          message: messages[index],
+          onQuestionTap: (question) {
+            context.read<ChatBloc>().add(ChatSendMessageStreaming(question));
+          },
+        );
       },
     );
   }

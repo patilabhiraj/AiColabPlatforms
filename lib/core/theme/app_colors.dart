@@ -1,3 +1,4 @@
+
 import 'package:flutter/material.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -111,8 +112,8 @@ abstract final class AppColors {
 
   static const Color darkMuted = Color(0xFF27272F);
   // oklch(0.705 0.015 286.067) → medium gray
+  static const Color darkMutedForeground = Color(0xFF9393A5);
 
-  static const Color darkMutedForeground = Color(0xFF9393A5);   
   static const Color darkAccent = Color(0xFF27272F);
   static const Color darkAccentForeground = Color(0xFFFAFAFA);
 

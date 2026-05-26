@@ -1,6 +1,18 @@
 
 import 'package:flutter/material.dart';
 
+/// Quick theme-aware color helpers for chat widgets.
+extension AppThemeX on BuildContext {
+  bool get isDark => Theme.of(this).brightness == Brightness.dark;
+  Color get cBg     => isDark ? AppColors.darkBackground      : AppColors.lightBackground;
+  Color get cFg     => isDark ? AppColors.darkForeground      : AppColors.lightForeground;
+  Color get cCard   => isDark ? AppColors.darkCard            : AppColors.lightCard;
+  Color get cBorder => isDark ? AppColors.darkBorder          : AppColors.lightBorder;
+  Color get cMuted  => isDark ? AppColors.darkMutedForeground : AppColors.lightMutedForeground;
+  Color get cError  => isDark ? AppColors.darkDestructive     : AppColors.lightDestructive;
+  Color get cSidebar=> isDark ? AppColors.darkSidebar         : AppColors.lightSidebar;
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // App Color Tokens
 // ─────────────────────────────────────────────────────────────────────────────

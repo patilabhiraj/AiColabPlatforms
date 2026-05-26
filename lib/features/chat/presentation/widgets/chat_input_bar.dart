@@ -66,18 +66,16 @@ class _ChatInputBarState extends State<ChatInputBar> with SingleTickerProviderSt
     final bottomPad = MediaQuery.viewPaddingOf(context).bottom;
     
     return Container(
-      decoration: const BoxDecoration(
-        color: AppColors.darkBackground,
-      ),
+      decoration: BoxDecoration(color: context.cBg),
       padding: EdgeInsets.fromLTRB(16, 16, 16, bottomPad > 0 ? bottomPad + 8 : 16),
       child: Container(
         decoration: BoxDecoration(
-          color: AppColors.darkCard.withValues(alpha: 0.4),
+          color: context.cCard.withValues(alpha: 0.4),
           borderRadius: BorderRadius.circular(28),
           border: Border.all(
             color: _isFocused
-                ? AppColors.darkBorder.withValues(alpha: 0.35)
-                : AppColors.darkBorder.withValues(alpha: 0.2),
+                ? context.cBorder.withValues(alpha: 0.55)
+                : context.cBorder.withValues(alpha: 0.3),
             width: 1,
           ),
         ),
@@ -94,17 +92,15 @@ class _ChatInputBarState extends State<ChatInputBar> with SingleTickerProviderSt
                 maxLines: null,
                 keyboardType: TextInputType.multiline,
                 textInputAction: TextInputAction.newline,
-                style: const TextStyle(
-                  color: AppColors.darkForeground,
+                style: TextStyle(
+                  color: context.cFg,
                   fontSize: 15,
                   height: 1.4,
                 ),
                 decoration: InputDecoration(
-                  hintText: widget.enabled
-                      ? 'Chat with Claude...'
-                      : 'AI is thinking…',
+                  hintText: widget.enabled ? 'Chat with Claude...' : 'AI is thinking…',
                   hintStyle: TextStyle(
-                    color: AppColors.darkMutedForeground.withValues(alpha: 0.45),
+                    color: context.cMuted.withValues(alpha: 0.6),
                     fontSize: 15,
                   ),
                   filled: false,
@@ -145,13 +141,13 @@ class _ChatInputBarState extends State<ChatInputBar> with SingleTickerProviderSt
                         child: Container(
                           width: 38,
                           height: 38,
-                          decoration: const BoxDecoration(
+                          decoration: BoxDecoration(
                             shape: BoxShape.circle,
-                            color: AppColors.darkForeground,
+                            color: context.cFg,
                           ),
-                          child: const Icon(
+                          child: Icon(
                             Icons.arrow_upward_rounded,
-                            color: AppColors.darkBackground,
+                            color: context.cBg,
                             size: 20,
                           ),
                         ),
@@ -184,15 +180,10 @@ class _IconButton extends StatelessWidget {
       child: Container(
         width: 38,
         height: 38,
-        decoration: const BoxDecoration(
-          shape: BoxShape.circle,
-          color: Colors.transparent,
-        ),
+        decoration: const BoxDecoration(shape: BoxShape.circle, color: Colors.transparent),
         child: Icon(
           icon,
-          color: onTap != null
-              ? AppColors.darkMutedForeground.withValues(alpha: 0.75)
-              : AppColors.darkMutedForeground.withValues(alpha: 0.35),
+          color: context.cMuted.withValues(alpha: onTap != null ? 0.75 : 0.35),
           size: 24,
         ),
       ),
@@ -200,142 +191,3 @@ class _IconButton extends StatelessWidget {
   }
 }
 
-// ── Model Selector Sheet ──────────────────────────────────────────────────────
-class _ModelSelectorSheet extends StatelessWidget {
-  const _ModelSelectorSheet({
-    required this.selectedModel,
-    required this.onSelect,
-  });
-
-  final String selectedModel;
-  final ValueChanged<String> onSelect;
-
-  static const _models = [
-    ('Sonnet 4.6', 'Most capable model'),
-    ('Sonnet 3.5', 'Fast and efficient'),
-    ('Opus 3', 'Maximum intelligence'),
-    ('Haiku 3', 'Lightning fast'),
-  ];
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      decoration: const BoxDecoration(
-        color: AppColors.darkCard,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      padding: const EdgeInsets.fromLTRB(20, 20, 20, 32),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Handle bar
-          Center(
-            child: Container(
-              width: 40,
-              height: 4,
-              decoration: BoxDecoration(
-                color: AppColors.darkMutedForeground.withValues(alpha: 0.3),
-                borderRadius: BorderRadius.circular(2),
-              ),
-            ),
-          ),
-          const SizedBox(height: 20),
-          
-          const Text(
-            'Select Model',
-            style: TextStyle(
-              color: AppColors.darkForeground,
-              fontSize: 18,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-          const SizedBox(height: 16),
-          
-          ..._models.map((model) => _ModelTile(
-            name: model.$1,
-            description: model.$2,
-            isSelected: model.$1 == selectedModel,
-            onTap: () => onSelect(model.$1),
-          )),
-        ],
-      ),
-    );
-  }
-}
-
-// ── Model Tile ────────────────────────────────────────────────────────────────
-class _ModelTile extends StatelessWidget {
-  const _ModelTile({
-    required this.name,
-    required this.description,
-    required this.isSelected,
-    required this.onTap,
-  });
-
-  final String name;
-  final String description;
-  final bool isSelected;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(12),
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-          margin: const EdgeInsets.only(bottom: 8),
-          decoration: BoxDecoration(
-            color: isSelected
-                ? AppColors.landingPrimary.withValues(alpha: 0.1)
-                : Colors.transparent,
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(
-              color: isSelected
-                  ? AppColors.landingPrimary.withValues(alpha: 0.3)
-                  : AppColors.darkBorder.withValues(alpha: 0.2),
-            ),
-          ),
-          child: Row(
-            children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      name,
-                      style: TextStyle(
-                        color: isSelected
-                            ? AppColors.landingPrimary
-                            : AppColors.darkForeground,
-                        fontSize: 15,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      description,
-                      style: TextStyle(
-                        color: AppColors.darkMutedForeground.withValues(alpha: 0.7),
-                        fontSize: 13,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              if (isSelected)
-                const Icon(
-                  Icons.check_circle_rounded,
-                  color: AppColors.landingPrimary,
-                  size: 20,
-                ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}

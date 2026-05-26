@@ -40,7 +40,7 @@ class _ChatDrawerState extends State<ChatDrawer> {
   @override
   Widget build(BuildContext context) {
     return Drawer(
-      backgroundColor: Colors.black,
+      backgroundColor: context.cSidebar,
       width: MediaQuery.of(context).size.width * 0.85,
       child: SafeArea(
         child: Column(

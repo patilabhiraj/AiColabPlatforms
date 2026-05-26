@@ -25,3 +25,21 @@ class ChatDeleteConversation extends ChatEvent {
   final String conversationId;
   ChatDeleteConversation(this.conversationId);
 }
+
+class ChatToggleStarMessage extends ChatEvent {
+  final ChatMessage message;
+  ChatToggleStarMessage(this.message);
+}
+
+class ChatRegenerateMessage extends ChatEvent {
+  final String chatId;
+  final String messageId;
+  ChatRegenerateMessage(this.chatId, this.messageId);
+}
+
+class ChatSubmitFeedback extends ChatEvent {
+  final String chatId;
+  final String messageId;
+  final bool isPositive;
+  ChatSubmitFeedback(this.chatId, this.messageId, this.isPositive);
+}

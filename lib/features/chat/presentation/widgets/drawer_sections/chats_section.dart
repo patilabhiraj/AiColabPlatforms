@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../../../core/theme/app_colors.dart';
 import '../../../bloc/chat_bloc.dart';
 import '../../../domain/entities/chat_conversation.dart';
+import '../../pages/starred_messages_page.dart';
 import 'section_header.dart';
 
 class ChatsSection extends StatelessWidget {
@@ -57,26 +58,75 @@ class ChatsSection extends StatelessWidget {
                 return Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Starred Messages header
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                      child: Row(
-                        children: [
-                          Icon(
-                            Icons.star_rounded,
-                            size: 18,
-                            color: Colors.amber.withValues(alpha: 0.9),
-                          ),
-                          const SizedBox(width: 8),
-                          Text(
-                            'Starred Messages',
-                            style: TextStyle(
-                              color: AppColors.darkForeground.withValues(alpha: 0.85),
-                              fontSize: 15,
-                              fontWeight: FontWeight.w500,
+                    // Starred Messages — tappable row
+                    Material(
+                      color: Colors.transparent,
+                      child: InkWell(
+                        onTap: () {
+                          Navigator.pop(context); // close drawer
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => BlocProvider.value(
+                                value: context.read<ChatBloc>(),
+                                child: const StarredMessagesPage(),
+                              ),
                             ),
+                          );
+                        },
+                        borderRadius: BorderRadius.circular(8),
+                        child: Container(
+                          margin: const EdgeInsets.symmetric(horizontal: 0, vertical: 2),
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                          decoration: BoxDecoration(
+                            color: Colors.amber.withValues(alpha: 0.1),
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(color: Colors.amber.withValues(alpha: 0.2)),
                           ),
-                        ],
+                          child: Row(
+                            children: [
+                              Icon(Icons.star_rounded, size: 18, color: Colors.amber.withValues(alpha: 0.9)),
+                              const SizedBox(width: 8),
+                              Text(
+                                'Starred Messages',
+                                style: TextStyle(
+                                  color: AppColors.darkForeground.withValues(alpha: 0.85),
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                              const Spacer(),
+                              BlocBuilder<ChatBloc, ChatState>(
+                                buildWhen: (p, c) {
+                                  if (p is ChatLoaded && c is ChatLoaded) {
+                                    return p.starredMessages.length != c.starredMessages.length;
+                                  }
+                                  return false;
+                                },
+                                builder: (context, state) {
+                                  if (state is! ChatLoaded || state.starredMessages.isEmpty) {
+                                    return const SizedBox();
+                                  }
+                                  return Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                                    decoration: BoxDecoration(
+                                      color: Colors.amber.withValues(alpha: 0.85),
+                                      borderRadius: BorderRadius.circular(10),
+                                    ),
+                                    child: Text(
+                                      '${state.starredMessages.length}',
+                                      style: const TextStyle(
+                                        color: Colors.black,
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.w700,
+                                      ),
+                                    ),
+                                  );
+                                },
+                              ),
+                            ],
+                          ),
+                        ),
                       ),
                     ),
                     const SizedBox(height: 4),

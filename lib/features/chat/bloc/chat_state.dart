@@ -13,6 +13,7 @@ class ChatLoaded extends ChatState {
   final bool isSending;
   final String? streamingContent;
   final String? streamingMessageId;
+  final List<ChatMessage> starredMessages;
 
   ChatLoaded({
     required this.conversations,
@@ -21,6 +22,7 @@ class ChatLoaded extends ChatState {
     this.isSending = false,
     this.streamingContent,
     this.streamingMessageId,
+    this.starredMessages = const [],
   });
 
   bool get isStreaming => streamingContent != null;
@@ -34,6 +36,7 @@ class ChatLoaded extends ChatState {
     String? streamingContent,
     bool clearStreaming = false,
     String? streamingMessageId,
+    List<ChatMessage>? starredMessages,
   }) {
     return ChatLoaded(
       conversations: conversations ?? this.conversations,
@@ -44,6 +47,7 @@ class ChatLoaded extends ChatState {
       isSending: isSending ?? this.isSending,
       streamingContent: clearStreaming ? null : (streamingContent ?? this.streamingContent),
       streamingMessageId: clearStreaming ? null : (streamingMessageId ?? this.streamingMessageId),
+      starredMessages: starredMessages ?? this.starredMessages,
     );
   }
 }

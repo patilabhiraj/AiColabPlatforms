@@ -28,7 +28,7 @@ class ChatEmptyState extends StatelessWidget {
           colors: [
             AppColors.landingPrimary.withValues(alpha: 0.12),
             AppColors.landingPrimary.withValues(alpha: 0.05),
-            AppColors.darkBackground.withValues(alpha: 0.0),
+            context.cBg.withValues(alpha: 0.0),
           ],
           stops: const [0.0, 0.3, 1.0],
         ),
@@ -46,8 +46,8 @@ class ChatEmptyState extends StatelessWidget {
               _FadeInText(
                 text: '${_getGreeting()}!',
                 delay: 200,
-                style: const TextStyle(
-                  color: AppColors.darkForeground,
+                style: TextStyle(
+                  color: context.cFg,
                   fontSize: 36,
                   fontWeight: FontWeight.w800,
                   letterSpacing: -0.5,
@@ -59,19 +59,18 @@ class ChatEmptyState extends StatelessWidget {
                 text: 'How can I help you today?',
                 delay: 400,
                 style: TextStyle(
-                  color: AppColors.darkMutedForeground.withValues(alpha: 0.85),
+                  color: context.cMuted.withValues(alpha: 0.85),
                   fontSize: 17,
                   height: 1.5,
                 ),
               ),
               const SizedBox(height: 60),
-              
-              // ── Feature Pills ────────────────────────────────────────────
+
               _FadeInText(
                 text: 'Powered by advanced AI models',
                 delay: 600,
                 style: TextStyle(
-                  color: AppColors.darkMutedForeground.withValues(alpha: 0.6),
+                  color: context.cMuted.withValues(alpha: 0.6),
                   fontSize: 13,
                 ),
               ),

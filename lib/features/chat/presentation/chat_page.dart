@@ -18,6 +18,7 @@ class ChatPage extends StatefulWidget {
 
 class _ChatPageState extends State<ChatPage> {
   final _scrollCtrl = ScrollController();
+  bool _isStreaming = false;
 
   @override
   void dispose() {
@@ -25,29 +26,34 @@ class _ChatPageState extends State<ChatPage> {
     super.dispose();
   }
 
-  void _scrollToBottom() {
+  void _scrollToBottom({bool animated = true}) {
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (_scrollCtrl.hasClients) {
+      if (!_scrollCtrl.hasClients) return;
+      final maxExtent = _scrollCtrl.position.maxScrollExtent;
+      if (animated) {
         _scrollCtrl.animateTo(
-          _scrollCtrl.position.maxScrollExtent,
-          duration: const Duration(milliseconds: 300),
+          maxExtent,
+          duration: const Duration(milliseconds: 250),
           curve: Curves.easeOut,
         );
+      } else {
+        _scrollCtrl.jumpTo(maxExtent);
       }
     });
   }
 
   @override
   Widget build(BuildContext context) {
+    final isDark = context.isDark;
     return AnnotatedRegion<SystemUiOverlayStyle>(
-      value: const SystemUiOverlayStyle(
-        statusBarColor: Colors.transparent, // Transparent status bar
-        statusBarIconBrightness: Brightness.light, // Light icons for dark background
-        systemNavigationBarColor: Colors.transparent, // Transparent navigation bar
-        systemNavigationBarIconBrightness: Brightness.light,
+      value: SystemUiOverlayStyle(
+        statusBarColor: Colors.transparent,
+        statusBarIconBrightness: isDark ? Brightness.light : Brightness.dark,
+        systemNavigationBarColor: Colors.transparent,
+        systemNavigationBarIconBrightness: isDark ? Brightness.light : Brightness.dark,
       ),
       child: Scaffold(
-        backgroundColor: AppColors.darkBackground,
+        backgroundColor: context.cBg,
         extendBodyBehindAppBar: true,
         drawer: const ChatDrawer(),
         body: Stack(
@@ -56,15 +62,26 @@ class _ChatPageState extends State<ChatPage> {
             SafeArea(
               child: Column(
                 children: [
-                  _CustomHeader(),
+                  const _CustomHeader(),
                   
                   // Chat Content
                   Expanded(
                     child: BlocConsumer<ChatBloc, ChatState>(
+                      listenWhen: (prev, curr) {
+                        if (curr is! ChatLoaded) return false;
+                        if (prev is! ChatLoaded) return true;
+                        return curr.messages.length > prev.messages.length ||
+                            curr.isStreaming != prev.isStreaming ||
+                            (curr.isStreaming &&
+                                curr.streamingContent != prev.streamingContent);
+                      },
                       listener: (context, state) {
-                        if (state is ChatLoaded) _scrollToBottom();
-                    },
-                    builder: (context, state) {
+                        if (state is! ChatLoaded) return;
+                        // Instant jump while streaming, smooth animate for new messages
+                        _scrollToBottom(animated: !_isStreaming);
+                        _isStreaming = state.isStreaming;
+                      },
+                      builder: (context, state) {
                       if (state is ChatLoading) {
                         return Center(
                           child: Column(
@@ -91,7 +108,7 @@ class _ChatPageState extends State<ChatPage> {
                               Text(
                                 'Loading...',
                                 style: TextStyle(
-                                  color: AppColors.darkMutedForeground.withValues(alpha: 0.8),
+                                  color: context.cMuted.withValues(alpha: 0.8),
                                   fontSize: 14,
                                 ),
                               ),
@@ -112,11 +129,11 @@ class _ChatPageState extends State<ChatPage> {
                                   height: 60,
                                   decoration: BoxDecoration(
                                     shape: BoxShape.circle,
-                                    color: AppColors.darkDestructive.withValues(alpha: 0.1),
+                                    color: context.cError.withValues(alpha: 0.1),
                                   ),
-                                  child: const Icon(
+                                  child: Icon(
                                     Icons.error_outline_rounded,
-                                    color: AppColors.darkDestructive,
+                                    color: context.cError,
                                     size: 32,
                                   ),
                                 ),
@@ -124,8 +141,8 @@ class _ChatPageState extends State<ChatPage> {
                                 Text(
                                   state.message,
                                   textAlign: TextAlign.center,
-                                  style: const TextStyle(
-                                    color: AppColors.darkForeground,
+                                  style: TextStyle(
+                                    color: context.cFg,
                                     fontSize: 15,
                                   ),
                                 ),
@@ -151,6 +168,7 @@ class _ChatPageState extends State<ChatPage> {
                                     isStreaming: state.isStreaming,
                                     streamingContent: state.streamingContent ?? '',
                                     scrollCtrl: _scrollCtrl,
+                                    chatId: state.selectedConversation?.id,
                                   ),
                           ),
                           ChatInputBar(
@@ -195,87 +213,73 @@ class _ChatBackgroundState extends State<_ChatBackground>
 
   @override
   Widget build(BuildContext context) {
+    final bg = context.cBg;
+    final isDark = context.isDark;
+
     return Positioned.fill(
       child: Stack(
         fit: StackFit.expand,
         children: [
-          // Base dark background
+          DecoratedBox(decoration: BoxDecoration(color: bg)),
+
+          // Subtle brand glow at top (lighter in light mode)
           DecoratedBox(
-            decoration: const BoxDecoration(
-              color: AppColors.darkBackground,
+            decoration: BoxDecoration(
+              gradient: RadialGradient(
+                center: Alignment.topCenter,
+                radius: 1.2,
+                colors: [
+                  AppColors.landingPrimary.withValues(alpha: isDark ? 0.15 : 0.08),
+                  bg.withValues(alpha: 0.0),
+                ],
+                stops: const [0.0, 1.0],
+              ),
             ),
           ),
-          
-          // Subtle center glow (very minimal)
-          DecoratedBox(
-  decoration: BoxDecoration(
-    gradient: RadialGradient(
-      center: Alignment.topCenter,  // ✅ Changed
-      radius: 1.2,                  // ✅ Slightly larger radius
-      colors: [
-        AppColors.landingPrimary.withValues(alpha: 0.15),
-        AppColors.darkBackground.withValues(alpha: 0.0),
-      ],
-      stops: const [0.0, 1.0],
-    ),
-  ),
-),
-          // DecoratedBox(
-          //   decoration: BoxDecoration(
-          //     gradient: RadialGradient(
-          //       center: Alignment.center,
-          //       radius: 0.8,
-          //       colors: [
-          //         AppColors.landingPrimary.withValues(alpha: 0.12),
-          //         AppColors.darkBackground.withValues(alpha: 0.0),
-          //       ],
-          //       stops: const [0.0, 1.0],
-          //     ),
-          //   ),
-          // ),
-          
+
           // Grid pattern
           CustomPaint(
-            painter: _CheckerGridPainter(),
+            painter: _CheckerGridPainter(borderColor: context.cBorder),
             size: Size.infinite,
           ),
-          
-          // Animated subtle glow in center
-          AnimatedBuilder(
-            animation: _glowController,
-            builder: (context, child) {
-              final glow = 0.06 + (_glowController.value * 0.04);
-              return DecoratedBox(
-                decoration: BoxDecoration(
-                  gradient: RadialGradient(
-                    center: Alignment.topCenter,
-                    radius: 0.6,
-                    colors: [
-                      AppColors.landingPrimary.withValues(alpha: glow),
-                      AppColors.darkBackground.withValues(alpha: 0.0),
-                    ],
-                    stops: const [0.0, 1.0],
+
+          // Animated subtle glow (dark mode only)
+          if (isDark)
+            AnimatedBuilder(
+              animation: _glowController,
+              builder: (context, child) {
+                final glow = 0.06 + (_glowController.value * 0.04);
+                return DecoratedBox(
+                  decoration: BoxDecoration(
+                    gradient: RadialGradient(
+                      center: Alignment.topCenter,
+                      radius: 0.6,
+                      colors: [
+                        AppColors.landingPrimary.withValues(alpha: glow),
+                        AppColors.darkBackground.withValues(alpha: 0.0),
+                      ],
+                      stops: const [0.0, 1.0],
+                    ),
                   ),
-                ),
-              );
-            },
-          ),
-          
-          // Strong vignette - sides completely dark
+                );
+              },
+            ),
+
+          // Vignette
           DecoratedBox(
-  decoration: BoxDecoration(
-    gradient: RadialGradient(
-      center: Alignment.topCenter,  // ✅ Changed
-      radius: 1.0,
-      colors: [
-        AppColors.darkBackground.withValues(alpha: 0.9),
-        AppColors.darkBackground.withValues(alpha: 0.0),
-        AppColors.darkBackground.withValues(alpha: 1.9),
-      ],
-      stops: const [0.0, 0.6, 1.0],
-    ),
-  ),
-),
+            decoration: BoxDecoration(
+              gradient: RadialGradient(
+                center: Alignment.topCenter,
+                radius: 1.0,
+                colors: [
+                  bg.withValues(alpha: isDark ? 0.9 : 0.5),
+                  bg.withValues(alpha: 0.0),
+                  bg.withValues(alpha: isDark ? 1.9 : 0.8),
+                ],
+                stops: const [0.0, 0.6, 1.0],
+              ),
+            ),
+          ),
         ],
       ),
     );
@@ -283,53 +287,42 @@ class _ChatBackgroundState extends State<_ChatBackground>
 }
 
 class _CheckerGridPainter extends CustomPainter {
-  const _CheckerGridPainter();
+  const _CheckerGridPainter({required this.borderColor});
+  final Color borderColor;
 
   @override
   void paint(Canvas canvas, Size size) {
-    final double step = 32.0; // Consistent grid size
-    
-    // Grid lines - only visible in center area
+    const double step = 32.0;
     final linePaint = Paint()
       ..style = PaintingStyle.stroke
       ..strokeWidth = 0.8;
-
     final centerX = size.width / 2;
     final centerY = size.height / 2;
 
-    // Draw horizontal lines
     for (double y = 0; y <= size.height; y += step) {
-      // Calculate distance from center (0.0 = center, 1.0 = edge)
       final distanceY = (y - centerY).abs() / centerY;
-      
-      // Only draw lines in center area (fade out towards edges)
       if (distanceY < 0.8) {
-        final opacity = 0.3 * (1.0 - distanceY);
-        linePaint.color = AppColors.darkBorder.withValues(alpha: opacity);
+        linePaint.color = borderColor.withValues(alpha: 0.3 * (1.0 - distanceY));
         canvas.drawLine(Offset(0, y), Offset(size.width, y), linePaint);
       }
     }
-    
-    // Draw vertical lines
     for (double x = 0; x <= size.width; x += step) {
-      // Calculate distance from center
       final distanceX = (x - centerX).abs() / centerX;
-      
-      // Only draw lines in center area
       if (distanceX < 0.8) {
-        final opacity = 0.3 * (1.0 - distanceX);
-        linePaint.color = AppColors.darkBorder.withValues(alpha: opacity);
+        linePaint.color = borderColor.withValues(alpha: 0.3 * (1.0 - distanceX));
         canvas.drawLine(Offset(x, 0), Offset(x, size.height), linePaint);
       }
     }
   }
 
   @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+  bool shouldRepaint(_CheckerGridPainter old) => old.borderColor != borderColor;
 }
 
 // ── Custom Header (Minimal Floating Buttons) ─────────────────────────────────
 class _CustomHeader extends StatelessWidget {
+  const _CustomHeader();
+
   @override
   Widget build(BuildContext context) {
     return Padding(
@@ -381,15 +374,14 @@ class _FloatingButton extends StatelessWidget {
           height: 40,
           decoration: BoxDecoration(
             shape: BoxShape.circle,
-            color: const Color.fromARGB(255, 1, 1, 31).withValues(alpha: 0.5),
-            // border: Border.all(
-            //   color: AppColors.darkBorder.withValues(alpha: 0.4),
-            //   width: 1,
-            // ),
+            color: context.cCard.withValues(alpha: context.isDark ? 0.5 : 0.9),
+            border: Border.all(
+              color: context.cBorder.withValues(alpha: 0.4),
+            ),
           ),
           child: Icon(
             icon,
-            color: AppColors.darkForeground.withValues(alpha: 0.9),
+            color: context.cFg.withValues(alpha: 0.9),
             size: 27,
           ),
         ),
@@ -406,13 +398,15 @@ class _MessagesList extends StatelessWidget {
     required this.isStreaming,
     required this.streamingContent,
     required this.scrollCtrl,
+    this.chatId,
   });
 
-  final List messages;
+  final List<ChatMessage> messages;
   final bool isSending;
   final bool isStreaming;
   final String streamingContent;
   final ScrollController scrollCtrl;
+  final String? chatId;
 
   @override
   Widget build(BuildContext context) {
@@ -425,7 +419,6 @@ class _MessagesList extends StatelessWidget {
       itemBuilder: (context, index) {
         if (index == messages.length) {
           if (isStreaming) {
-            // Show streaming message
             return ChatBubble(
               message: ChatMessage(
                 id: 'streaming',
@@ -434,6 +427,7 @@ class _MessagesList extends StatelessWidget {
                 timestamp: DateTime.now(),
               ),
               isStreaming: true,
+              chatId: chatId,
               onQuestionTap: (question) {
                 context.read<ChatBloc>().add(ChatSendMessageStreaming(question));
               },
@@ -442,11 +436,14 @@ class _MessagesList extends StatelessWidget {
             return const TypingIndicator();
           }
         }
-        return ChatBubble(
-          message: messages[index],
-          onQuestionTap: (question) {
-            context.read<ChatBloc>().add(ChatSendMessageStreaming(question));
-          },
+        return RepaintBoundary(
+          child: ChatBubble(
+            message: messages[index],
+            chatId: chatId,
+            onQuestionTap: (question) {
+              context.read<ChatBloc>().add(ChatSendMessageStreaming(question));
+            },
+          ),
         );
       },
     );

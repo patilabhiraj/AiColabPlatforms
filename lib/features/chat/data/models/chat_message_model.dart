@@ -6,18 +6,18 @@ class ChatMessageModel extends ChatMessage {
     required super.content,
     required super.isUser,
     required super.timestamp,
+    super.modelName,
   });
 
   factory ChatMessageModel.fromJson(Map<String, dynamic> json) {
-    // Handle both integer and string IDs
     final dynamic idValue = json['_id'] ?? json['id'];
     final String id = idValue != null ? idValue.toString() : '';
-    
     return ChatMessageModel(
       id: id,
       content: json['content'] ?? '',
       isUser: json['role'] == 'user',
       timestamp: DateTime.tryParse(json['createdAt'] ?? '') ?? DateTime.now(),
+      modelName: json['model'] as String? ?? json['modelName'] as String?,
     );
   }
 }

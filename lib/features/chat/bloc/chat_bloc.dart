@@ -32,6 +32,9 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
     on<ChatSendMessageStreaming>(_onSendMessageStreaming);
     on<ChatStartNewConversation>(_onStartNew);
     on<ChatDeleteConversation>(_onDeleteConversation);
+    on<ChatToggleStarMessage>(_onToggleStar);
+    on<ChatRegenerateMessage>(_onRegenerateMessage);
+    on<ChatSubmitFeedback>(_onSubmitFeedback);
   }
 
   Future<void> _onLoadConversations(
@@ -73,7 +76,6 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
     if (state is! ChatLoaded) return;
     final current = state as ChatLoaded;
 
-    // Optimistically add user message
     final userMsg = ChatMessage(
       id: 'u_${DateTime.now().millisecondsSinceEpoch}',
       content: event.content,
@@ -86,45 +88,32 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
       isSending: true,
     ));
 
-    // If no conversation selected, create new one first
     String conversationId;
     ChatConversation? newConversation;
-    
+
     if (current.selectedConversation == null) {
-      // Create new conversation
       final createResult = await _repository.createConversation(event.content);
-      
-      final conversation = createResult.fold(
-        (failure) => null,
-        (conv) => conv,
-      );
-      
+      final conversation = createResult.fold((failure) => null, (conv) => conv);
       if (conversation == null) {
-        // Failed to create conversation
         emit(current.copyWith(isSending: false));
         return;
       }
-      
       conversationId = conversation.id;
       newConversation = conversation;
-      
-      // Update state with new conversation - KEEP the user message!
+
       if (state is! ChatLoaded) return;
       final currentState = state as ChatLoaded;
-      
       emit(currentState.copyWith(
         selectedConversation: newConversation,
         conversations: [newConversation, ...currentState.conversations],
-        messages: currentState.messages, // ✅ Keep existing messages (user message)
+        messages: currentState.messages,
         isSending: true,
       ));
     } else {
       conversationId = current.selectedConversation!.id;
     }
 
-    // Send message
     final result = await _sendMessage(conversationId, event.content);
-
     if (state is! ChatLoaded) return;
     final updated = state as ChatLoaded;
 
@@ -154,15 +143,11 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
     if (state is! ChatLoaded) return;
     final current = state as ChatLoaded;
 
-    // Call API to delete conversation
     await _repository.deleteChat(event.conversationId);
 
-    // Remove from local state
     final updatedConversations = current.conversations
         .where((conv) => conv.id != event.conversationId)
         .toList();
-
-    // If deleted conversation was selected, clear selection
     final updatedSelection = current.selectedConversation?.id == event.conversationId
         ? null
         : current.selectedConversation;
@@ -175,6 +160,99 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
     ));
   }
 
+  void _onToggleStar(ChatToggleStarMessage event, Emitter<ChatState> emit) {
+    if (state is! ChatLoaded) return;
+    final current = state as ChatLoaded;
+
+    final wasStarred = event.message.isStarred;
+    final toggled = event.message.copyWith(isStarred: !wasStarred);
+
+    final updatedMessages = current.messages
+        .map((m) => m.id == event.message.id ? toggled : m)
+        .toList();
+
+    final updatedStarred = wasStarred
+        ? current.starredMessages.where((m) => m.id != event.message.id).toList()
+        : [...current.starredMessages, toggled];
+
+    emit(current.copyWith(
+      messages: updatedMessages,
+      starredMessages: updatedStarred,
+    ));
+  }
+
+  Future<void> _onRegenerateMessage(
+    ChatRegenerateMessage event,
+    Emitter<ChatState> emit,
+  ) async {
+    if (state is! ChatLoaded) return;
+    final current = state as ChatLoaded;
+
+    // Remove the message being regenerated
+    final updatedMessages = current.messages
+        .where((m) => m.id != event.messageId)
+        .toList();
+
+    emit(current.copyWith(
+      messages: updatedMessages,
+      isSending: true,
+    ));
+
+    final streamingMessageId = 'ai_${DateTime.now().millisecondsSinceEpoch}';
+
+    await emit.forEach<Either<Failure, String>>(
+      _repository.regenerateMessage(event.chatId, event.messageId),
+      onData: (either) {
+        return either.fold(
+          (failure) {
+            if (state is! ChatLoaded) return state;
+            return (state as ChatLoaded).copyWith(isSending: false, clearStreaming: true);
+          },
+          (content) {
+            if (state is! ChatLoaded) return state;
+            return (state as ChatLoaded).copyWith(
+              streamingContent: content,
+              streamingMessageId: streamingMessageId,
+              isSending: true,
+            );
+          },
+        );
+      },
+    );
+
+    if (state is! ChatLoaded) return;
+    final finalState = state as ChatLoaded;
+
+    if (finalState.streamingContent != null) {
+      final rawContent = finalState.streamingContent!;
+      final suggestedQuestions = _extractSuggestedQuestions(rawContent);
+      final cleanedContent = _cleanStreamedContent(rawContent);
+
+      emit(finalState.copyWith(
+        messages: [
+          ...finalState.messages,
+          ChatMessage(
+            id: streamingMessageId,
+            content: cleanedContent,
+            isUser: false,
+            timestamp: DateTime.now(),
+            suggestedQuestions: suggestedQuestions.isNotEmpty ? suggestedQuestions : null,
+          ),
+        ],
+        isSending: false,
+        clearStreaming: true,
+      ));
+    }
+  }
+
+  Future<void> _onSubmitFeedback(
+    ChatSubmitFeedback event,
+    Emitter<ChatState> emit,
+  ) async {
+    // Fire-and-forget — no UI state change needed
+    await _repository.submitFeedback(event.chatId, event.messageId, event.isPositive);
+  }
+
   Future<void> _onSendMessageStreaming(
     ChatSendMessageStreaming event,
     Emitter<ChatState> emit,
@@ -182,7 +260,6 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
     if (state is! ChatLoaded) return;
     final current = state as ChatLoaded;
 
-    // Optimistically add user message
     final userMsg = ChatMessage(
       id: 'u_${DateTime.now().millisecondsSinceEpoch}',
       content: event.content,
@@ -195,32 +272,21 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
       isSending: true,
     ));
 
-    // If no conversation selected, create new one first
     String conversationId;
     ChatConversation? newConversation;
-    
+
     if (current.selectedConversation == null) {
-      // Create new conversation
       final createResult = await _repository.createConversation(event.content);
-      
-      final conversation = createResult.fold(
-        (failure) => null,
-        (conv) => conv,
-      );
-      
+      final conversation = createResult.fold((failure) => null, (conv) => conv);
       if (conversation == null) {
-        // Failed to create conversation
         emit(current.copyWith(isSending: false));
         return;
       }
-      
       conversationId = conversation.id;
       newConversation = conversation;
-      
-      // Update state with new conversation - KEEP the user message!
+
       if (state is! ChatLoaded) return;
       final currentState = state as ChatLoaded;
-      
       emit(currentState.copyWith(
         selectedConversation: newConversation,
         conversations: [newConversation, ...currentState.conversations],
@@ -231,23 +297,17 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
       conversationId = current.selectedConversation!.id;
     }
 
-    // Start streaming
     final streamingMessageId = 'ai_${DateTime.now().millisecondsSinceEpoch}';
-    
+
     await emit.forEach<Either<Failure, String>>(
       _repository.sendMessageStream(conversationId, event.content),
       onData: (either) {
         return either.fold(
           (failure) {
-            // Error during streaming
             if (state is! ChatLoaded) return state;
-            return (state as ChatLoaded).copyWith(
-              isSending: false,
-              clearStreaming: true,
-            );
+            return (state as ChatLoaded).copyWith(isSending: false, clearStreaming: true);
           },
           (content) {
-            // New token received - update streaming content
             if (state is! ChatLoaded) return state;
             return (state as ChatLoaded).copyWith(
               streamingContent: content,
@@ -259,39 +319,49 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
       },
     );
 
-    // Stream complete - add final message with suggested questions
     if (state is! ChatLoaded) return;
     final finalState = state as ChatLoaded;
-    
+
     if (finalState.streamingContent != null) {
-      // Extract suggested questions from the content
-      final suggestedQuestions = _extractSuggestedQuestions(finalState.streamingContent!);
-      
-      final finalMessage = ChatMessage(
-        id: streamingMessageId,
-        content: finalState.streamingContent!,
-        isUser: false,
-        timestamp: DateTime.now(),
-        suggestedQuestions: suggestedQuestions.isNotEmpty ? suggestedQuestions : null,
-      );
-      
+      final rawContent = finalState.streamingContent!;
+      final suggestedQuestions = _extractSuggestedQuestions(rawContent);
+      final cleanedContent = _cleanStreamedContent(rawContent);
+
       emit(finalState.copyWith(
-        messages: [...finalState.messages, finalMessage],
+        messages: [
+          ...finalState.messages,
+          ChatMessage(
+            id: streamingMessageId,
+            content: cleanedContent,
+            isUser: false,
+            timestamp: DateTime.now(),
+            suggestedQuestions: suggestedQuestions.isNotEmpty ? suggestedQuestions : null,
+          ),
+        ],
         isSending: false,
         clearStreaming: true,
       ));
     }
   }
-  
-  /// Extract suggested questions from response content
+
+  String _cleanStreamedContent(String content) {
+    return content
+        .replaceAll(RegExp(r'```json[\s\S]*?```', multiLine: true), '')
+        .replaceAll(RegExp(r'```[\s\S]*?```', multiLine: true), '')
+        .replaceAll(RegExp(r'\[\s*"[^"]*"(?:\s*,\s*"[^"]*")*\s*\]', multiLine: true), '')
+        .replaceAll('```json', '')
+        .replaceAll('```', '')
+        .replaceAll('***json', '')
+        .replaceAll('***', '')
+        .replaceAll(RegExp(r'\n{3,}'), '\n\n')
+        .trim();
+  }
+
   List<String> _extractSuggestedQuestions(String content) {
     final questions = <String>[];
-    
-    // Try to find JSON array pattern
     final jsonArrayPattern = RegExp(r'\[\s*"([^"]+)"(?:\s*,\s*"([^"]+)")*\s*\]', multiLine: true);
-    final matches = jsonArrayPattern.allMatches(content);
-    
-    for (final match in matches) {
+
+    for (final match in jsonArrayPattern.allMatches(content)) {
       try {
         final jsonStr = match.group(0);
         if (jsonStr != null) {
@@ -300,11 +370,9 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
             questions.addAll(decoded.map((e) => e.toString()));
           }
         }
-      } catch (e) {
-        // Ignore parse errors
-      }
+      } catch (_) {}
     }
-    
+
     return questions;
   }
 }

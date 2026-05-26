@@ -44,6 +44,12 @@ class _LoginPageState extends State<LoginPage> {
           } else if (state is AuthAuthenticated) {
             // CustomSnackBar.showSuccess(context, "Signed in successfully");
             context.go(AppRouter.chat);
+          } else if (state is AuthEmailVerificationRequired) {
+            CustomSnackBar.showInfo(
+              context,
+              'Please verify your email. OTP sent to ${state.email}',
+            );
+            context.go('${AppRouter.emailVerification}?email=${Uri.encodeComponent(state.email)}');
           }
         },
         builder: (context, state) {

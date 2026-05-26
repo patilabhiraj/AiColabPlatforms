@@ -10,3 +10,8 @@ class ServerFailure extends Failure {
 class NetworkFailure extends Failure {
   const NetworkFailure(super.message);
 }
+
+class EmailVerificationFailure extends Failure {
+  final String email;
+  const EmailVerificationFailure(this.email, super.message);
+}

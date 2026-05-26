@@ -1,8 +1,10 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
+import '../../../core/errors/failures.dart';
 import '../../../core/utils/app_logger.dart';
 import '../domain/entities/user_entity.dart';
 import '../domain/usecases/google_login_usecase.dart';
 import '../domain/usecases/login_usecase.dart';
+import '../domain/usecases/logout_usecase.dart';
 import '../domain/usecases/register_usecase.dart';
 part 'auth_event.dart';
 part 'auth_state.dart';
@@ -11,15 +13,18 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
   final LoginUseCase _loginUseCase;
   final RegisterUseCase _registerUseCase;
   final GoogleLoginUseCase _googleLoginUseCase;
+  final LogoutUseCase _logoutUseCase;
 
   AuthBloc(
     this._loginUseCase,
     this._registerUseCase,
     this._googleLoginUseCase,
+    this._logoutUseCase,
   ) : super(AuthInitial()) {
     on<AuthLoginRequested>(_onLoginRequested);
     on<AuthRegisterRequested>(_onRegisterRequested);
     on<AuthGoogleSignInRequested>(_onGoogleSignInRequested);
+    on<AuthLogoutRequested>(_onLogoutRequested);
   }
 
   Future<void> _onLoginRequested(
@@ -36,8 +41,13 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
 
     result.fold(
       (failure) {
-        logger.warning('❌ Login failed for ${event.email}: ${failure.message}');
-        emit(AuthError(failure.message));
+        if (failure is EmailVerificationFailure) {
+          logger.warning('📧 Email verification required for ${failure.email}');
+          emit(AuthEmailVerificationRequired(failure.email));
+        } else {
+          logger.warning('❌ Login failed for ${event.email}: ${failure.message}');
+          emit(AuthError(failure.message));
+        }
       },
       (user) {
         logger.info('✅ Login successful for ${user.email}');
@@ -62,8 +72,13 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
 
     result.fold(
       (failure) {
-        logger.warning('❌ Registration failed for ${event.email}: ${failure.message}');
-        emit(AuthError(failure.message));
+        if (failure is EmailVerificationFailure) {
+          logger.warning('📧 Email verification required for ${failure.email}');
+          emit(AuthEmailVerificationRequired(failure.email));
+        } else {
+          logger.warning('❌ Registration failed for ${event.email}: ${failure.message}');
+          emit(AuthError(failure.message));
+        }
       },
       (user) {
         logger.info('✅ Registration successful for ${user.email}');
@@ -89,6 +104,27 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
       (user) {
         logger.info('✅ Google Sign-In successful for ${user.email}');
         emit(AuthAuthenticated(user));
+      },
+    );
+  }
+
+  Future<void> _onLogoutRequested(
+    AuthLogoutRequested event,
+    Emitter<AuthState> emit,
+  ) async {
+    logger.info('🚪 Logout requested');
+    
+    final result = await _logoutUseCase();
+
+    result.fold(
+      (failure) {
+        logger.warning('❌ Logout failed: ${failure.message}');
+        // Even if logout fails, clear the state
+        emit(AuthInitial());
+      },
+      (_) {
+        logger.info('✅ Logout successful');
+        emit(AuthInitial());
       },
     );
   }

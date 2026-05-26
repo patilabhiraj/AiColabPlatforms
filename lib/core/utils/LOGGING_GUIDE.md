@@ -51,7 +51,6 @@ try {
 }
 ```
 
----
 
 ### 3️⃣ API Calls madhe Error Handling
 
@@ -68,7 +67,7 @@ Future<Either<Failure, User>> login(LoginParams params) async {
     return Left(ServerFailure(message));
   } catch (e, stackTrace) {
     ErrorHandler.logError('Login', e, stackTrace);
-    return Left(ServerFailure('काहीतरी चूक झाली'));
+    return Left(ServerFailure('Something went wrong'));
   }
 }
 ```

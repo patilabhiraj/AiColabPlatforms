@@ -26,6 +26,18 @@ class CustomSnackBar {
     );
   }
 
+  static void showInfo(
+    BuildContext context,
+    String message,
+  ) {
+    _show(
+      context,
+      message,
+      Icons.info_outline_rounded,
+      const Color(0xFF3B82F6),
+    );
+  }
+
   static void showWarning(
     BuildContext context,
     String message,

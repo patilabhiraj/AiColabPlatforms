@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:dartz/dartz.dart';
 import 'package:dio/dio.dart';
+import '../../../../core/errors/exceptions.dart';
 import '../../../../core/errors/failures.dart';
 import '../../domain/entities/user_entity.dart';
 import '../../domain/repositories/auth_repository.dart';
@@ -28,6 +29,15 @@ class AuthRepositoryImpl implements AuthRepository {
         print('DEBUG WARNING: Token is empty in login response!');
       }
       return Right(userModel);
+    } on EmailVerificationRequiredException catch (e) {
+      // Automatically resend OTP
+      try {
+        await remoteDataSource.resendEmailOtp(e.email);
+        print('DEBUG: OTP resent to ${e.email}');
+      } catch (otpError) {
+        print('DEBUG WARNING: Failed to resend OTP: $otpError');
+      }
+      return Left(EmailVerificationFailure(e.email, e.message));
     } on DioException catch (e) {
       return Left(ServerFailure(_dioMessage(e, 'Failed to login.')));
     } catch (_) {
@@ -51,6 +61,10 @@ class AuthRepositoryImpl implements AuthRepository {
         print('DEBUG WARNING: Token is empty in register response!');
       }
       return Right(userModel);
+    } on EmailVerificationRequiredException catch (e) {
+      // OTP already sent during registration, no need to resend
+      print('DEBUG: Email verification required for ${e.email}');
+      return Left(EmailVerificationFailure(e.email, e.message));
     } on DioException catch (e) {
       return Left(ServerFailure(_dioMessage(e, 'Failed to register.')));
     } catch (_) {

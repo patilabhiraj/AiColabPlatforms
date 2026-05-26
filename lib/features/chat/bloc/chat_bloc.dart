@@ -31,6 +31,7 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
     on<ChatSendMessage>(_onSendMessage);
     on<ChatSendMessageStreaming>(_onSendMessageStreaming);
     on<ChatStartNewConversation>(_onStartNew);
+    on<ChatDeleteConversation>(_onDeleteConversation);
   }
 
   Future<void> _onLoadConversations(
@@ -142,6 +143,34 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
       selectedConversation: null,
       messages: [],
       isSending: false,
+      clearStreaming: true,
+    ));
+  }
+
+  Future<void> _onDeleteConversation(
+    ChatDeleteConversation event,
+    Emitter<ChatState> emit,
+  ) async {
+    if (state is! ChatLoaded) return;
+    final current = state as ChatLoaded;
+
+    // Call API to delete conversation
+    await _repository.deleteChat(event.conversationId);
+
+    // Remove from local state
+    final updatedConversations = current.conversations
+        .where((conv) => conv.id != event.conversationId)
+        .toList();
+
+    // If deleted conversation was selected, clear selection
+    final updatedSelection = current.selectedConversation?.id == event.conversationId
+        ? null
+        : current.selectedConversation;
+
+    emit(current.copyWith(
+      conversations: updatedConversations,
+      selectedConversation: updatedSelection,
+      messages: updatedSelection == null ? [] : current.messages,
       clearStreaming: true,
     ));
   }

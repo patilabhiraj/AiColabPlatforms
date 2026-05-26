@@ -20,3 +20,8 @@ class ChatSendMessageStreaming extends ChatEvent {
 }
 
 class ChatStartNewConversation extends ChatEvent {}
+
+class ChatDeleteConversation extends ChatEvent {
+  final String conversationId;
+  ChatDeleteConversation(this.conversationId);
+}

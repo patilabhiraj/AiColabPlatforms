@@ -15,7 +15,9 @@ import '../features/auth/domain/usecases/google_login_usecase.dart';
 import '../features/auth/domain/usecases/login_usecase.dart';
 import '../features/auth/domain/usecases/logout_usecase.dart';
 import '../features/auth/domain/usecases/register_usecase.dart';
+import '../features/auth/domain/usecases/resend_email_otp_usecase.dart';
 import '../features/auth/domain/usecases/reset_password_usecase.dart';
+import '../features/auth/domain/usecases/verify_email_otp_usecase.dart';
 import '../features/chat/bloc/chat_bloc.dart';
 import '../features/chat/data/datasources/chat_remote_data_source.dart';
 import '../features/chat/data/repositories/chat_repository_impl.dart';
@@ -59,6 +61,8 @@ void init() {
   sl.registerLazySingleton(() => ResetPasswordUseCase(sl()));
   sl.registerLazySingleton(() => GetCachedUserUseCase(sl()));
   sl.registerLazySingleton(() => LogoutUseCase(sl()));
+  sl.registerLazySingleton(() => VerifyEmailOtpUseCase(sl()));
+  sl.registerLazySingleton(() => ResendEmailOtpUseCase(sl()));
   sl.registerLazySingleton(() => GetConversationsUseCase(sl()));
   sl.registerLazySingleton(() => GetMessagesUseCase(sl()));
   sl.registerLazySingleton(() => SendMessageUseCase(sl()));
@@ -66,7 +70,7 @@ void init() {
 
   // ── BLoCs ─────────────────────────────────────────────────────────────────
   sl.registerFactory(() => SplashBloc(sl()));
-  sl.registerFactory(() => AuthBloc(sl(), sl(), sl()));
+  sl.registerFactory(() => AuthBloc(sl(), sl(), sl(), sl()));
   sl.registerFactory(() => ForgotPasswordBloc(sl(), sl()));
   sl.registerFactory(() => ChatBloc(sl(), sl(), sl(), sl()));
 }

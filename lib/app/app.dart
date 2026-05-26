@@ -1,9 +1,11 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:go_router/go_router.dart';
 import 'injection.dart';
 import 'routes/router.dart';
 
 import 'package:flutter/material.dart';
 import '../core/theme/theme.dart';
+import '../core/utils/app_logger.dart';
 import '../features/auth/bloc/auth_bloc.dart';
 import '../features/auth/bloc/forgot_password_bloc.dart';
 import '../features/auth/bloc/splash_bloc.dart';
@@ -19,16 +21,24 @@ class App extends StatelessWidget {
         BlocProvider(create: (_) => sl<AuthBloc>()),
         BlocProvider(create: (_) => sl<ForgotPasswordBloc>()),
       ],
-      child: MaterialApp.router(
-        title: 'ColabPlatforms AI',
-        debugShowCheckedModeBanner: false,
+      child: BlocListener<AuthBloc, AuthState>(
+        listener: (context, state) {
+          if (state is AuthInitial) {
+            logger.info('🚪 User logged out - navigating to splash');
+            context.go(AppRouter.splash);
+          }
+        },
+        child: MaterialApp.router(
+          title: 'ColabPlatforms AI',
+          debugShowCheckedModeBanner: false,
 
-        // ── Themes ──────────────────────────────────────────────────────────────
-        theme: AppTheme.light,
-        darkTheme: AppTheme.dark,
-        themeMode: ThemeMode.system,
-        // ── GoRouter Config ─────────────────────────────────────────────────────
-        routerConfig: AppRouter.router,
+          // ── Themes ──────────────────────────────────────────────────────────────
+          theme: AppTheme.light,
+          darkTheme: AppTheme.dark,
+          themeMode: ThemeMode.system,
+          // ── GoRouter Config ─────────────────────────────────────────────────────
+          routerConfig: AppRouter.router,
+        ),
       ),
     );
   }

@@ -1,5 +1,6 @@
 import 'dart:convert';
 import '../../../../core/constants/api_constants.dart';
+import '../../../../core/errors/exceptions.dart';
 import '../../../../core/network/api_client.dart';
 import '../models/user_model.dart';
 
@@ -24,6 +25,17 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
       ApiConstants.login,
       data: {"email": email, "password": password},
     );
+    
+    // Check if email verification is required
+    final data = response.data['data'];
+    if (data != null && data['requiresEmailVerification'] == true) {
+      final userEmail = data['email'] ?? email;
+      throw EmailVerificationRequiredException(
+        email: userEmail,
+        message: 'Email verification required',
+      );
+    }
+    
     return UserModel.fromJson(response.data);
   }
 
@@ -43,6 +55,17 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
         "password": password,
       },
     );
+    
+    // Check if email verification is required
+    final data = response.data['data'];
+    if (data != null && data['requiresEmailVerification'] == true) {
+      final userEmail = data['email'] ?? email;
+      throw EmailVerificationRequiredException(
+        email: userEmail,
+        message: 'Email verification required',
+      );
+    }
+    
     return UserModel.fromJson(response.data);
   }
 

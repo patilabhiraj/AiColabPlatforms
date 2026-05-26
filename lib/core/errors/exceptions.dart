@@ -26,3 +26,12 @@ class NetworkException extends AppException {
 class AuthException extends AppException {
   const AuthException({required String message}) : super(message);
 }
+
+/// Exception thrown when email verification is required
+class EmailVerificationRequiredException extends AppException {
+  final String email;
+  const EmailVerificationRequiredException({
+    required this.email,
+    required String message,
+  }) : super(message);
+}

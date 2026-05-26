@@ -16,6 +16,9 @@ abstract class ChatRemoteDataSource {
   Future<ChatMessageModel> sendMessage(String conversationId, String content);
   Future<ChatConversationModel> createConversation(String firstMessage);
   
+  // Streaming method for real-time responses
+  Stream<String> sendMessageStream(String conversationId, String content);
+  
   // New API methods
   Future<List<ChatConversationModel>> listChats();
   Future<ChatConversationModel> createChat(String title);
@@ -222,6 +225,79 @@ class ChatRemoteDataSourceImpl implements ChatRemoteDataSource {
     }
   }
 
+@override
+Stream<String> sendMessageStream(String conversationId, String content) async* {
+  try {
+    logger.info('Starting streaming message to conversation: $conversationId');
+    
+    final response = await dio.post(
+      ApiConstants.chatSend(conversationId),
+      data: {'content': content},
+      options: Options(
+        responseType: ResponseType.stream,
+      ),
+    );
+
+    if (response.statusCode == 200 || response.statusCode == 201) {
+      final stream = (response.data as ResponseBody).stream;
+      final StringBuffer contentBuffer = StringBuffer();
+      String? messageId;
+      
+      // ✅ Fixed: cast to List<int> first, then transform with utf8.decoder
+      final textStream = stream.cast<List<int>>().transform(utf8.decoder);
+      
+      await for (final chunk in textStream) {
+        final lines = chunk.split('\n');
+        
+        for (final line in lines) {
+          if (line.startsWith('data: ')) {
+            final dataStr = line.substring(6);
+            
+            if (dataStr == '[DONE]') {
+              logger.info('Stream complete');
+              return; // ✅ use return instead of break to exit async* generator
+            }
+            
+            try {
+              final data = jsonDecode(dataStr) as Map<String, dynamic>;
+              final type = data['type'] as String?;
+              
+              if (type == 'message_id') {
+                messageId = data['assistantMessageId']?.toString();
+                logger.debug('Received message ID: $messageId');
+              } else if (type == 'token') {
+                final token = data['content'] as String?;
+                if (token != null) {
+                  contentBuffer.write(token);
+                  yield contentBuffer.toString();
+                }
+              }
+            } catch (e) {
+              logger.debug('Failed to parse SSE line: $dataStr');
+            }
+          }
+        }
+      }
+      
+      // Final cleanup and yield
+      final finalContent = _cleanResponseContent(contentBuffer.toString());
+      if (finalContent != contentBuffer.toString()) {
+        yield finalContent;
+      }
+      
+    } else {
+      throw ServerException(message: 'Failed to send message');
+    }
+  } on DioException catch (e) {
+    logger.error('DioException in sendMessageStream', e);
+    throw ServerException(
+      message: e.response?.data['message'] ?? 'Server error occurred',
+    );
+  } catch (e) {
+    logger.error('Unexpected error in sendMessageStream', e);
+    throw ServerException(message: 'Unexpected error: $e');
+  }
+}
   @override
   Future<ChatConversationModel> createConversation(String firstMessage) async {
     try {
@@ -540,21 +616,134 @@ class ChatRemoteDataSourceImpl implements ChatRemoteDataSource {
   }
 
   /// Clean response content by removing ***json blocks and *** markers
-  String _cleanResponseContent(String content) {
-    // Remove ***json...*** blocks (suggested questions)
-    final jsonBlockRegex = RegExp(r'\*\*\*json\s*\n.*?\n\*\*\*', dotAll: true);
-    content = content.replaceAll(jsonBlockRegex, '');
-    
-    // Remove standalone *** markers
-    content = content.replaceAll(RegExp(r'\*\*\*\s*\n?'), '');
-    
-    // Remove extra whitespace and newlines
-    content = content.trim();
-    
-    // Remove multiple consecutive newlines
-    content = content.replaceAll(RegExp(r'\n{3,}'), '\n\n');
-    
-    return content;
+  /// Clean response content and extract suggested questions
+  /// Returns a map with 'content' and 'questions' keys
+Map<String, dynamic> _cleanResponseContentAndExtractQuestions(String content) {
+  logger.debug('Original content length: ${content.length}');
+  
+  final originalContent = content;
+  List<String> suggestedQuestions = [];
+
+  // Step 1: Extract JSON arrays with questions before removing them
+  final jsonArrayPattern = RegExp(r'\[\s*"([^"]*)"(?:\s*,\s*"([^"]*)")*\s*\]', multiLine: true);
+  final matches = jsonArrayPattern.allMatches(content);
+  
+  for (final match in matches) {
+    try {
+      final jsonStr = match.group(0);
+      if (jsonStr != null) {
+        final decoded = jsonDecode(jsonStr);
+        if (decoded is List) {
+          suggestedQuestions.addAll(decoded.map((e) => e.toString()));
+        }
+      }
+    } catch (e) {
+      logger.debug('Failed to parse JSON array: ${match.group(0)}');
+    }
   }
 
+  // Step 2: Remove ```json ... ``` blocks
+  content = content.replaceAll(
+    RegExp(r'```json[\s\S]*?```', multiLine: true),
+    '',
+  );
+  
+  // Step 3: Remove ***json ... *** blocks
+  content = content.replaceAll(
+    RegExp(r'\*\*\*json[\s\S]*?\*\*\*', multiLine: true),
+    '',
+  );
+  
+  // Step 4: Remove any remaining ``` code blocks
+  content = content.replaceAll(
+    RegExp(r'```[\s\S]*?```', multiLine: true),
+    '',
+  );
+  
+  // Step 5: Remove standalone JSON arrays
+  content = content.replaceAll(
+    RegExp(r'\[\s*"[^"]*"(?:\s*,\s*"[^"]*")*\s*\]', multiLine: true),
+    '',
+  );
+  
+  // Step 6: Remove lines that start with "***json" or end with "***"
+  content = content.replaceAll(
+    RegExp(r'^.*\*\*\*json.*$', multiLine: true),
+    '',
+  );
+  content = content.replaceAll(
+    RegExp(r'^.*\*\*\*\s*$', multiLine: true),
+    '',
+  );
+  
+  // Step 7: Remove SUGGESTIONS: lines and horizontal rules
+  content = content.replaceAll(
+    RegExp(r'SUGGESTIONS:.*', caseSensitive: false),
+    '',
+  );
+  content = content.replaceAll(
+    RegExp(r'Suggested follow-up questions:.*', caseSensitive: false),
+    '',
+  );
+  content = content.replaceAll(
+    RegExp(r'^Suggested.*questions.*$', caseSensitive: false, multiLine: true),
+    '',
+  );
+  
+  // Remove horizontal rules (---, ___, ***)
+  content = content.replaceAll(RegExp(r'^[\-_\*]{3,}\s*$', multiLine: true), '');
+  content = content.replaceAll(RegExp(r'^\s*[\-_]{3,}\s*$', multiLine: true), '');
+  
+  // Step 8: Remove emoji and special markers
+  content = content.replaceAll(RegExp(r'│\s*💡\s*'), '');
+  content = content.replaceAll(RegExp(r'💡\s*'), '');
+  content = content.replaceAll(RegExp(r'│\s*'), '');
+  content = content.replaceAll(RegExp(r'┃\s*'), '');
+  content = content.replaceAll(RegExp(r'─+'), '');  // Remove horizontal lines
+  
+  // Step 9: Remove any remaining backticks and triple asterisks
+  content = content.replaceAll('```json', '');
+  content = content.replaceAll('```', '');
+  content = content.replaceAll('***json', '');
+  content = content.replaceAll('***', '');
+  
+  // Step 10: DON'T remove double asterisks ** (markdown bold)
+  // Keep ** for bold formatting - it's valid markdown
+  
+  // Step 11: Remove lines with only special characters
+  content = content.replaceAll(
+    RegExp(r'^\s*[\[\]{}",\s]*\s*$', multiLine: true),
+    '',
+  );
+  
+  // Step 12: Clean up extra blank lines and whitespace
+  content = content.replaceAll(RegExp(r'\n{3,}'), '\n\n');
+  content = content.replaceAll(RegExp(r'^\s+', multiLine: true), '');
+  content = content.trim();
+
+  logger.debug('Cleaned content length: ${content.length}');
+  logger.debug('Extracted ${suggestedQuestions.length} suggested questions');
+
+  // Safety: if cleanup removed too much, return original with basic cleanup
+  if (content.isEmpty || content.length < 10) {
+    logger.warning('Cleanup removed too much content! Returning original.');
+    content = originalContent
+        .replaceAll('```json', '')
+        .replaceAll('```', '')
+        .replaceAll('***json', '')
+        .replaceAll('***', '')
+        .trim();
+  }
+
+  return {
+    'content': content,
+    'questions': suggestedQuestions,
+  };
+}
+
+  /// Clean response content (legacy method for backward compatibility)
+  String _cleanResponseContent(String content) {
+    final result = _cleanResponseContentAndExtractQuestions(content);
+    return result['content'] as String;
+  }
 }

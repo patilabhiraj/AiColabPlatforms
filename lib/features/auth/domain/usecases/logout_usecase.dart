@@ -7,7 +7,7 @@ class LogoutUseCase {
 
   LogoutUseCase(this.repository);
 
-  Future<Either<Failure, void>> call() {
-    return repository.logout();
+  Future<Either<Failure, void>> call() async {
+    return await repository.logout();
   }
 }

@@ -41,21 +41,19 @@ class _RegisterPageState extends State<RegisterPage> {
         iconTheme: IconThemeData(color: Theme.of(context).colorScheme.onSurface),
       ),
       body: BlocConsumer<AuthBloc, AuthState>(listener: (context, state) {
-
-  if (state is AuthError) {
-  CustomSnackBar.showError(
-    context,
-    state.message,           // ← positional
-    // backgroundColor: Colors.red,   ← Remove this line
-  );
-} else if (state is AuthAuthenticated) {
-  CustomSnackBar.showSuccess(
-    context,
-    "Account created successfully",
-  );
-  context.go(AppRouter.chat);
-}
-},
+        if (state is AuthError) {
+          CustomSnackBar.showError(context, state.message);
+        } else if (state is AuthAuthenticated) {
+          CustomSnackBar.showSuccess(context, "Account created successfully");
+          context.go(AppRouter.chat);
+        } else if (state is AuthEmailVerificationRequired) {
+          CustomSnackBar.showInfo(
+            context,
+            'Please verify your email. OTP sent to ${state.email}',
+          );
+          context.go('${AppRouter.emailVerification}?email=${Uri.encodeComponent(state.email)}');
+        }
+      },
 builder: (context, state) {
           final isLoading = state is AuthLoading;
 

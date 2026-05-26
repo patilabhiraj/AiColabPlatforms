@@ -15,3 +15,8 @@ class AuthError extends AuthState {
   final String message;
   AuthError(this.message);
 }
+
+class AuthEmailVerificationRequired extends AuthState {
+  final String email;
+  AuthEmailVerificationRequired(this.email);
+}

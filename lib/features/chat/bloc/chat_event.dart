@@ -14,4 +14,14 @@ class ChatSendMessage extends ChatEvent {
   ChatSendMessage(this.content);
 }
 
+class ChatSendMessageStreaming extends ChatEvent {
+  final String content;
+  ChatSendMessageStreaming(this.content);
+}
+
 class ChatStartNewConversation extends ChatEvent {}
+
+class ChatDeleteConversation extends ChatEvent {
+  final String conversationId;
+  ChatDeleteConversation(this.conversationId);
+}

@@ -2,6 +2,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/utils/app_logger.dart';
+import '../../features/auth/presentation/email_verification_page.dart';
 import '../../features/auth/presentation/login_page.dart';
 import '../../features/auth/presentation/register_page.dart';
 import '../../features/auth/presentation/splash_page.dart';
@@ -15,6 +16,7 @@ class AppRouter {
   static const String login = '/login';
   static const String register = '/register';
   static const String forgotPassword = '/forgot-password';
+  static const String emailVerification = '/email-verification';
   static const String chat = '/chat';
 
   static late final GoRouter router;
@@ -39,6 +41,13 @@ class AppRouter {
         GoRoute(
           path: forgotPassword,
           builder: (context, state) => const ForgotPasswordPage(),
+        ),
+        GoRoute(
+          path: emailVerification,
+          builder: (context, state) {
+            final email = state.uri.queryParameters['email'] ?? '';
+            return EmailVerificationPage(email: email);
+          },
         ),
         GoRoute(
           path: chat,

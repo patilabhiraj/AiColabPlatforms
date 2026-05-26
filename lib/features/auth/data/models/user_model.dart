@@ -7,6 +7,7 @@ class UserModel extends UserEntity {
     required super.firstName,
     required super.lastName,
     required super.token,
+    super.profileImageUrl,
   });
 
   factory UserModel.fromJson(Map<String, dynamic> json) {
@@ -25,12 +26,22 @@ class UserModel extends UserEntity {
                            userJson['access_token'] ?? 
                            '';
     
+    // Extract profile image URL (common field names from Google OAuth and other providers)
+    final profileImageUrl = userJson['profileImageUrl'] ?? 
+                           userJson['profileImage'] ?? 
+                           userJson['photoUrl'] ?? 
+                           userJson['photo'] ?? 
+                           userJson['picture'] ?? 
+                           userJson['avatar'] ?? 
+                           userJson['image'];
+    
     return UserModel(
       id: (userJson['_id'] ?? userJson['id'] ?? '').toString(),
       email: userJson['email'] ?? '',
       firstName: userJson['firstName'] ?? '',
       lastName: userJson['lastName'] ?? '',
       token: extractedToken,
+      profileImageUrl: profileImageUrl?.toString(),
     );
   }
 
@@ -41,6 +52,7 @@ class UserModel extends UserEntity {
       'firstName': firstName,
       'lastName': lastName,
       'token': token,
+      if (profileImageUrl != null) 'profileImageUrl': profileImageUrl,
     };
   }
 }

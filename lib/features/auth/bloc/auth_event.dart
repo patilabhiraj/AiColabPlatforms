@@ -27,3 +27,5 @@ class AuthGoogleSignInRequested extends AuthEvent {
   final String token;
   AuthGoogleSignInRequested({required this.token});
 }
+
+class AuthLogoutRequested extends AuthEvent {}

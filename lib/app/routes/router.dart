@@ -1,6 +1,7 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../core/utils/app_logger.dart';
 import '../../features/auth/presentation/login_page.dart';
 import '../../features/auth/presentation/register_page.dart';
 import '../../features/auth/presentation/splash_page.dart';
@@ -19,7 +20,7 @@ class AppRouter {
   static late final GoRouter router;
 
   static void init(String initialLocation) {
-    print('DEBUG: Initializing GoRouter with initialLocation: "$initialLocation"');
+    logger.info('Initializing GoRouter with route: "$initialLocation"');
     router = GoRouter(
       initialLocation: initialLocation,
       routes: [

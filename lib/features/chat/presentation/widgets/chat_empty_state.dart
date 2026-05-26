@@ -1,154 +1,149 @@
 import 'package:flutter/material.dart';
 import '../../../../core/theme/app_colors.dart';
-import '../../../../core/theme/app_theme.dart';
 
+/// Premium Empty State with Interactive Elements
+/// Features:
+/// - Animated gradient background
+/// - Pulsing logo with rotating particles
+/// - Time-based greeting
+/// - Fade-in animations
 class ChatEmptyState extends StatelessWidget {
   const ChatEmptyState({super.key, required this.onSuggestion});
   final ValueChanged<String> onSuggestion;
 
-  static const _cards = [
-    (Icons.lightbulb_outline_rounded, 'Explain a concept',
-        'Get clear explanations on any topic'),
-    (Icons.code_rounded, 'Write or review code',
-        'Any language or framework'),
-    (Icons.bug_report_outlined, 'Debug an issue',
-        'Find and fix errors fast'),
-    (Icons.auto_awesome_outlined, 'Brainstorm ideas',
-        'Creative suggestions and plans'),
-  ];
+  String _getGreeting() {
+    final hour = DateTime.now().hour;
+    if (hour < 12) return 'Good morning';
+    if (hour < 17) return 'Good afternoon';
+    return 'Good evening';
+  }
 
   @override
   Widget build(BuildContext context) {
-    return Center(
-      child: SingleChildScrollView(
-        padding: const EdgeInsets.fromLTRB(20, 32, 20, 24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            // Logo
-            Container(
-              width: 70,
-              height: 70,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: AppColors.landingPrimary.withValues(alpha: 0.10),
-                border: Border.all(
-                  color: AppColors.landingPrimary.withValues(alpha: 0.30),
-                  width: 1.5,
+    return Container(
+      decoration: BoxDecoration(
+        gradient: RadialGradient(
+          center: Alignment.topCenter,
+          radius: 1.8,
+          colors: [
+            AppColors.landingPrimary.withValues(alpha: 0.12),
+            AppColors.landingPrimary.withValues(alpha: 0.05),
+            AppColors.darkBackground.withValues(alpha: 0.0),
+          ],
+          stops: const [0.0, 0.3, 1.0],
+        ),
+      ),
+      child: Center(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.fromLTRB(20, 80, 20, 32),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              
+              const SizedBox(height: 40),
+
+              // ── Greeting ─────────────────────────────────────────────────
+              _FadeInText(
+                text: '${_getGreeting()}!',
+                delay: 200,
+                style: const TextStyle(
+                  color: AppColors.darkForeground,
+                  fontSize: 36,
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: -0.5,
                 ),
               ),
-              child: const Icon(
-                Icons.all_inclusive_rounded,
-                color: AppColors.landingPrimary,
-                size: 34,
+              const SizedBox(height: 16),
+              
+              _FadeInText(
+                text: 'How can I help you today?',
+                delay: 400,
+                style: TextStyle(
+                  color: AppColors.darkMutedForeground.withValues(alpha: 0.85),
+                  fontSize: 17,
+                  height: 1.5,
+                ),
               ),
-            ),
-            const SizedBox(height: 18),
-
-            const Text(
-              'AI Colab',
-              style: TextStyle(
-                color: AppColors.darkForeground,
-                fontSize: 26,
-                fontWeight: FontWeight.w700,
-                letterSpacing: -0.4,
+              const SizedBox(height: 60),
+              
+              // ── Feature Pills ────────────────────────────────────────────
+              _FadeInText(
+                text: 'Powered by advanced AI models',
+                delay: 600,
+                style: TextStyle(
+                  color: AppColors.darkMutedForeground.withValues(alpha: 0.6),
+                  fontSize: 13,
+                ),
               ),
-            ),
-            const SizedBox(height: 6),
-            const Text(
-              'How can I help you today?',
-              style: TextStyle(
-                color: AppColors.darkMutedForeground,
-                fontSize: 15,
-              ),
-            ),
-            const SizedBox(height: 34),
-
-            // 2 × 2 suggestion grid
-            GridView.count(
-              crossAxisCount: 2,
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              crossAxisSpacing: 10,
-              mainAxisSpacing: 10,
-              childAspectRatio: 1.2,
-              children: _cards
-                  .map((c) => _SuggestionCard(
-                        icon: c.$1,
-                        title: c.$2,
-                        subtitle: c.$3,
-                        onTap: () => onSuggestion(c.$2),
-                      ))
-                  .toList(),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
   }
 }
 
-class _SuggestionCard extends StatelessWidget {
-  const _SuggestionCard({
-    required this.icon,
-    required this.title,
-    required this.subtitle,
-    required this.onTap,
+
+
+// ── Fade In Text ──────────────────────────────────────────────────────────────
+class _FadeInText extends StatefulWidget {
+  const _FadeInText({
+    required this.text,
+    required this.delay,
+    required this.style,
   });
 
-  final IconData icon;
-  final String title;
-  final String subtitle;
-  final VoidCallback onTap;
+  final String text;
+  final int delay;
+  final TextStyle style;
+
+  @override
+  State<_FadeInText> createState() => _FadeInTextState();
+}
+
+class _FadeInTextState extends State<_FadeInText> with SingleTickerProviderStateMixin {
+  late AnimationController _ctrl;
+  late Animation<double> _fadeAnim;
+  late Animation<Offset> _slideAnim;
+
+  @override
+  void initState() {
+    super.initState();
+    _ctrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 600),
+    );
+    
+    _fadeAnim = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(parent: _ctrl, curve: Curves.easeOut),
+    );
+    
+    _slideAnim = Tween<Offset>(
+      begin: const Offset(0, 0.3),
+      end: Offset.zero,
+    ).animate(CurvedAnimation(parent: _ctrl, curve: Curves.easeOut));
+    
+    Future.delayed(Duration(milliseconds: widget.delay), () {
+      if (mounted) _ctrl.forward();
+    });
+  }
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: AppRadius.borderXl,
-        child: Container(
-          padding: const EdgeInsets.all(14),
-          decoration: BoxDecoration(
-            color: AppColors.darkCard,
-            borderRadius: AppRadius.borderXl,
-            border: Border.all(color: AppColors.darkBorder),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Container(
-                width: 36,
-                height: 36,
-                decoration: BoxDecoration(
-                  color: AppColors.landingPrimary.withValues(alpha: 0.12),
-                  borderRadius: AppRadius.borderMd,
-                ),
-                child: Icon(icon, color: AppColors.landingPrimary, size: 18),
-              ),
-              const SizedBox(height: 10),
-              Text(
-                title,
-                style: const TextStyle(
-                  color: AppColors.darkForeground,
-                  fontSize: 13,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                subtitle,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
-                  color: AppColors.darkMutedForeground,
-                  fontSize: 11,
-                  height: 1.4,
-                ),
-              ),
-            ],
-          ),
+    return FadeTransition(
+      opacity: _fadeAnim,
+      child: SlideTransition(
+        position: _slideAnim,
+        child: Text(
+          widget.text,
+          textAlign: TextAlign.center,
+          style: widget.style,
         ),
       ),
     );

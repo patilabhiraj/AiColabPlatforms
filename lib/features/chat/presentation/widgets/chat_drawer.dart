@@ -11,7 +11,7 @@ class ChatDrawer extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Drawer(
-      backgroundColor: AppColors.darkSidebar,
+      backgroundColor: const Color(0xFF04000A),
       child: SafeArea(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,

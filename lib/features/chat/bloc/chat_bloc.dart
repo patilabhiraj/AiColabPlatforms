@@ -2,6 +2,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../domain/entities/chat_conversation.dart';
 import '../domain/entities/chat_message.dart';
+import '../domain/repositories/chat_repository.dart';
 import '../domain/usecases/get_conversations_usecase.dart';
 import '../domain/usecases/get_messages_usecase.dart';
 import '../domain/usecases/send_message_usecase.dart';
@@ -13,9 +14,14 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
   final GetConversationsUseCase _getConversations;
   final GetMessagesUseCase _getMessages;
   final SendMessageUseCase _sendMessage;
+  final ChatRepository _repository;
 
-  ChatBloc(this._getConversations, this._getMessages, this._sendMessage)
-      : super(ChatInitial()) {
+  ChatBloc(
+    this._getConversations,
+    this._getMessages,
+    this._sendMessage,
+    this._repository,
+  ) : super(ChatInitial()) {
     on<ChatLoadConversations>(_onLoadConversations);
     on<ChatSelectConversation>(_onSelectConversation);
     on<ChatSendMessage>(_onSendMessage);
@@ -74,7 +80,39 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
       isSending: true,
     ));
 
-    final conversationId = current.selectedConversation?.id ?? 'new';
+    // If no conversation selected, create new one first
+    String conversationId;
+    ChatConversation? newConversation;
+    
+    if (current.selectedConversation == null) {
+      // Create new conversation
+      final createResult = await _repository.createConversation(event.content);
+      
+      final conversation = createResult.fold(
+        (failure) => null,
+        (conv) => conv,
+      );
+      
+      if (conversation == null) {
+        // Failed to create conversation
+        emit(current.copyWith(isSending: false));
+        return;
+      }
+      
+      conversationId = conversation.id;
+      newConversation = conversation;
+      
+      // Update state with new conversation
+      emit(current.copyWith(
+        selectedConversation: newConversation,
+        conversations: [newConversation, ...current.conversations],
+        isSending: true,
+      ));
+    } else {
+      conversationId = current.selectedConversation!.id;
+    }
+
+    // Send message
     final result = await _sendMessage(conversationId, event.content);
 
     if (state is! ChatLoaded) return;

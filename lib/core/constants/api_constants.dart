@@ -12,6 +12,11 @@ abstract final class ApiConstants {
   static const String resetPassword    = '/api/auth/reset-password';
 
   // Chats 
+  static const String chats            = '/api/chats'; // GET (list), POST (create)
+  static String chatById(String id)    => '/api/chats/$id'; // GET, PUT, DELETE
+  static String chatMessages(String id) => '/api/chats/$id/messages'; // GET - Get messages
+  static String chatSend(String id)    => '/api/chats/$id/send'; // POST - Send message
+  static String chatContexts(String id) => '/api/chats/$id/contexts'; // GET, PUT
   static const String sharedChat       = '/api/chats/shared'; // append /{shareId}
   static const String downloadAttachment = '/api/attachments'; // append /{id}/download
 

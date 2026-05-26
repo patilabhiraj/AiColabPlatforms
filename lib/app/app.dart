@@ -26,7 +26,7 @@ class App extends StatelessWidget {
         // ── Themes ──────────────────────────────────────────────────────────────
         theme: AppTheme.light,
         darkTheme: AppTheme.dark,
-        themeMode: ThemeMode.system, // app defaults to dark
+        themeMode: ThemeMode.system,
         // ── GoRouter Config ─────────────────────────────────────────────────────
         routerConfig: AppRouter.router,
       ),

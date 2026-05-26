@@ -9,8 +9,12 @@ class ChatMessageModel extends ChatMessage {
   });
 
   factory ChatMessageModel.fromJson(Map<String, dynamic> json) {
+    // Handle both integer and string IDs
+    final dynamic idValue = json['_id'] ?? json['id'];
+    final String id = idValue != null ? idValue.toString() : '';
+    
     return ChatMessageModel(
-      id: json['_id'] ?? json['id'] ?? '',
+      id: id,
       content: json['content'] ?? '',
       isUser: json['role'] == 'user',
       timestamp: DateTime.tryParse(json['createdAt'] ?? '') ?? DateTime.now(),

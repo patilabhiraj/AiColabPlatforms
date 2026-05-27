@@ -31,6 +31,12 @@ class ChatToggleStarMessage extends ChatEvent {
   ChatToggleStarMessage(this.message);
 }
 
+class ChatToggleLikeMessage extends ChatEvent {
+  final ChatMessage message;
+  final bool? isLiked; // null = remove feedback, true = like, false = dislike
+  ChatToggleLikeMessage(this.message, this.isLiked);
+}
+
 class ChatRegenerateMessage extends ChatEvent {
   final String chatId;
   final String messageId;

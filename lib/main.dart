@@ -20,7 +20,7 @@ void main() async {
   // ── Initialize Dependency Injection ───────────────────────────────────────
   di.init();
 
-  // Force portrait orientation
+  // Force portrait orientation                               
   SystemChrome.setPreferredOrientations([
     DeviceOrientation.portraitUp,
     DeviceOrientation.portraitDown,

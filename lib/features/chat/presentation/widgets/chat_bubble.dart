@@ -256,24 +256,42 @@ class _ActionBar extends StatelessWidget {
         ),
         const SizedBox(width: 6),
 
-        // Thumbs up
+        // Thumbs up (Like)
         _ActionButton(
           icon: Icons.thumb_up_outlined,
           color: muted,
           card: card,
+          isActive: message.isLiked == true,
+          activeColor: Colors.green,
           onTap: chatId != null
-              ? () => context.read<ChatBloc>().add(ChatSubmitFeedback(chatId!, message.id, true))
+              ? () {
+                  // Toggle like: if already liked, remove feedback; otherwise set to liked
+                  final newLikeState = message.isLiked == true ? null : true;
+                  context.read<ChatBloc>().add(ChatToggleLikeMessage(message, newLikeState));
+                  if (newLikeState != null) {
+                    context.read<ChatBloc>().add(ChatSubmitFeedback(chatId!, message.id, true));
+                  }
+                }
               : () {},
         ),
         const SizedBox(width: 6),
 
-        // Thumbs down
+        // Thumbs down (Dislike)
         _ActionButton(
           icon: Icons.thumb_down_outlined,
           color: muted,
           card: card,
+          isActive: message.isLiked == false,
+          activeColor: Colors.red,
           onTap: chatId != null
-              ? () => context.read<ChatBloc>().add(ChatSubmitFeedback(chatId!, message.id, false))
+              ? () {
+                  // Toggle dislike: if already disliked, remove feedback; otherwise set to disliked
+                  final newLikeState = message.isLiked == false ? null : false;
+                  context.read<ChatBloc>().add(ChatToggleLikeMessage(message, newLikeState));
+                  if (newLikeState != null) {
+                    context.read<ChatBloc>().add(ChatSubmitFeedback(chatId!, message.id, false));
+                  }
+                }
               : () {},
         ),
         const SizedBox(width: 6),

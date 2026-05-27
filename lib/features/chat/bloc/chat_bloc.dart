@@ -33,6 +33,7 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
     on<ChatStartNewConversation>(_onStartNew);
     on<ChatDeleteConversation>(_onDeleteConversation);
     on<ChatToggleStarMessage>(_onToggleStar);
+    on<ChatToggleLikeMessage>(_onToggleLike);
     on<ChatRegenerateMessage>(_onRegenerateMessage);
     on<ChatSubmitFeedback>(_onSubmitFeedback);
   }
@@ -181,6 +182,19 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
     ));
   }
 
+  void _onToggleLike(ChatToggleLikeMessage event, Emitter<ChatState> emit) {
+    if (state is! ChatLoaded) return;
+    final current = state as ChatLoaded;
+
+    final toggled = event.message.copyWith(isLiked: event.isLiked);
+
+    final updatedMessages = current.messages
+        .map((m) => m.id == event.message.id ? toggled : m)
+        .toList();
+
+    emit(current.copyWith(messages: updatedMessages));
+  }
+
   Future<void> _onRegenerateMessage(
     ChatRegenerateMessage event,
     Emitter<ChatState> emit,
@@ -188,7 +202,22 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
     if (state is! ChatLoaded) return;
     final current = state as ChatLoaded;
 
-    // Remove the message being regenerated
+    // Find the AI message being regenerated
+    final aiMessageIndex = current.messages.indexWhere((m) => m.id == event.messageId);
+    if (aiMessageIndex == -1) return;
+
+    // Find the user message before this AI message
+    String? userMessageContent;
+    for (int i = aiMessageIndex - 1; i >= 0; i--) {
+      if (current.messages[i].isUser) {
+        userMessageContent = current.messages[i].content;
+        break;
+      }
+    }
+
+    if (userMessageContent == null) return;
+
+    // Remove the AI message being regenerated
     final updatedMessages = current.messages
         .where((m) => m.id != event.messageId)
         .toList();
@@ -198,10 +227,11 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
       isSending: true,
     ));
 
+    // Resend the user's message to get new response
     final streamingMessageId = 'ai_${DateTime.now().millisecondsSinceEpoch}';
 
     await emit.forEach<Either<Failure, String>>(
-      _repository.regenerateMessage(event.chatId, event.messageId),
+      _repository.sendMessageStream(event.chatId, userMessageContent),
       onData: (either) {
         return either.fold(
           (failure) {

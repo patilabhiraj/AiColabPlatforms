@@ -7,6 +7,16 @@ class CreateConversationUseCase {
   final ChatRepository repository;
   CreateConversationUseCase(this.repository);
 
-  Future<Either<Failure, ChatConversation>> call(String firstMessage) =>
-      repository.createConversation(firstMessage);
+  Future<Either<Failure, ChatConversation>> call(
+    String firstMessage, {
+    List<int>? modelIds,
+    String? capability,
+    int? assistantId,
+  }) =>
+      repository.createConversation(
+        firstMessage,
+        modelIds: modelIds,
+        capability: capability,
+        assistantId: assistantId,
+      );
 }

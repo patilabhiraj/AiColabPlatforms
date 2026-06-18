@@ -22,8 +22,11 @@ import '../features/chat/bloc/chat_bloc.dart';
 import '../features/chat/data/datasources/chat_remote_data_source.dart';
 import '../features/chat/data/repositories/chat_repository_impl.dart';
 import '../features/chat/domain/repositories/chat_repository.dart';
+import '../features/chat/domain/usecases/create_conversation_usecase.dart';
+import '../features/chat/domain/usecases/get_assistants_usecase.dart';
 import '../features/chat/domain/usecases/get_conversations_usecase.dart';
 import '../features/chat/domain/usecases/get_messages_usecase.dart';
+import '../features/chat/domain/usecases/get_models_usecase.dart';
 import '../features/chat/domain/usecases/get_shared_chat_usecase.dart';
 import '../features/chat/domain/usecases/send_message_usecase.dart';
 
@@ -66,11 +69,14 @@ void init() {
   sl.registerLazySingleton(() => GetConversationsUseCase(sl()));
   sl.registerLazySingleton(() => GetMessagesUseCase(sl()));
   sl.registerLazySingleton(() => SendMessageUseCase(sl()));
+  sl.registerLazySingleton(() => CreateConversationUseCase(sl()));
+  sl.registerLazySingleton(() => GetModelsUseCase(sl()));
+  sl.registerLazySingleton(() => GetAssistantsUseCase(sl()));
   sl.registerLazySingleton(() => GetSharedChatUseCase(sl()));
 
   // ── BLoCs ─────────────────────────────────────────────────────────────────
   sl.registerFactory(() => SplashBloc(sl()));
   sl.registerFactory(() => AuthBloc(sl(), sl(), sl(), sl()));
   sl.registerFactory(() => ForgotPasswordBloc(sl(), sl()));
-  sl.registerFactory(() => ChatBloc(sl(), sl(), sl(), sl()));
+  sl.registerFactory(() => ChatBloc(sl(), sl(), sl(), sl(), sl(), sl(), sl()));
 }

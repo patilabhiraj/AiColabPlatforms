@@ -1,5 +1,7 @@
 import 'package:dartz/dartz.dart';
 import '../../../../core/errors/failures.dart';
+import '../entities/ai_model.dart';
+import '../entities/assistant.dart';
 import '../entities/chat_context.dart';
 import '../entities/chat_conversation.dart';
 import '../entities/chat_message.dart';
@@ -11,7 +13,16 @@ abstract class ChatRepository {
   Future<Either<Failure, List<ChatConversation>>> getConversations();
   Future<Either<Failure, List<ChatMessage>>> getMessages(String conversationId);
   Future<Either<Failure, ChatMessage>> sendMessage(String conversationId, String content);
-  Future<Either<Failure, ChatConversation>> createConversation(String firstMessage);
+  Future<Either<Failure, ChatConversation>> createConversation(
+    String firstMessage, {
+    List<int>? modelIds,
+    String? capability,
+    int? assistantId,
+  });
+
+  // ── Catalog (models & assistants) ─────────────────────────────────────────
+  Future<Either<Failure, List<AiModel>>> getModels();
+  Future<Either<Failure, List<Assistant>>> getAssistants();
 
   // ── Streaming ─────────────────────────────────────────────────────────────
   Stream<Either<Failure, String>> sendMessageStream(String conversationId, String content);

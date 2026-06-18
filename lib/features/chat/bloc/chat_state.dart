@@ -15,6 +15,23 @@ class ChatLoaded extends ChatState {
   final String? streamingMessageId;
   final List<ChatMessage> starredMessages;
 
+  // ── Model selection / capabilities ────────────────────────────────────────
+  /// All active models available for selection (from `/api/models`).
+  final List<AiModel> availableModels;
+
+  /// IDs of currently selected models. In single mode this holds exactly one.
+  final List<int> selectedModelIds;
+
+  /// Active capability: STANDARD | WEB_SEARCH | IMAGE_GENERATION.
+  final String capability;
+
+  /// false = single model, true = multi-model comparison.
+  final bool multiMode;
+
+  // ── Assistants ────────────────────────────────────────────────────────────
+  final List<Assistant> assistants;
+  final Assistant? selectedAssistant;
+
   ChatLoaded({
     required this.conversations,
     this.selectedConversation,
@@ -23,6 +40,12 @@ class ChatLoaded extends ChatState {
     this.streamingContent,
     this.streamingMessageId,
     this.starredMessages = const [],
+    this.availableModels = const [],
+    this.selectedModelIds = const [],
+    this.capability = 'STANDARD',
+    this.multiMode = false,
+    this.assistants = const [],
+    this.selectedAssistant,
   });
 
   bool get isStreaming => streamingContent != null;
@@ -37,6 +60,13 @@ class ChatLoaded extends ChatState {
     bool clearStreaming = false,
     String? streamingMessageId,
     List<ChatMessage>? starredMessages,
+    List<AiModel>? availableModels,
+    List<int>? selectedModelIds,
+    String? capability,
+    bool? multiMode,
+    List<Assistant>? assistants,
+    Assistant? selectedAssistant,
+    bool clearAssistant = false,
   }) {
     return ChatLoaded(
       conversations: conversations ?? this.conversations,
@@ -48,8 +78,19 @@ class ChatLoaded extends ChatState {
       streamingContent: clearStreaming ? null : (streamingContent ?? this.streamingContent),
       streamingMessageId: clearStreaming ? null : (streamingMessageId ?? this.streamingMessageId),
       starredMessages: starredMessages ?? this.starredMessages,
+      availableModels: availableModels ?? this.availableModels,
+      selectedModelIds: selectedModelIds ?? this.selectedModelIds,
+      capability: capability ?? this.capability,
+      multiMode: multiMode ?? this.multiMode,
+      assistants: assistants ?? this.assistants,
+      selectedAssistant:
+          clearAssistant ? null : (selectedAssistant ?? this.selectedAssistant),
     );
   }
+
+  /// Models valid for the active capability (mirrors the web filtering).
+  List<AiModel> get modelsForCapability =>
+      availableModels.where((m) => m.supportsCapability(capability)).toList();
 }
 
 class ChatError extends ChatState {

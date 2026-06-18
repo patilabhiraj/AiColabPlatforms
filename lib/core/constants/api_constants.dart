@@ -43,6 +43,11 @@ abstract final class ApiConstants {
   static const String contextsSidebar        = '/api/contexts/sidebar';   // GET sidebar contexts
   static String contextById(String id)       => '/api/contexts/$id';      // GET, PUT, DELETE
 
+  // ── Models & Assistants ───────────────────────────────────────────────────────
+  static const String models                  = '/api/models';          // GET list (public)
+  static const String assistants              = '/api/assistants';      // GET list (auth)
+  static String assistantById(String id)      => '/api/assistants/$id'; // GET
+
   // ── Attachments ───────────────────────────────────────────────────────────────
   static const String downloadAttachment     = '/api/attachments'; // append /{id}/download
 

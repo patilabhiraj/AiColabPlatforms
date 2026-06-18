@@ -1,7 +1,15 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+
 import '../../../../../core/theme/app_colors.dart';
+import '../../../bloc/chat_bloc.dart';
+import '../../../domain/entities/assistant.dart';
+import '../catalog_visuals.dart';
 import 'section_header.dart';
 
+/// Lists the assistants from `/api/assistants`. Each assistant carries its own
+/// gradient colours, so its icon tile and selected highlight use that colour —
+/// every assistant looks distinct (and adapts to light/dark mode).
 class AssistantsSection extends StatelessWidget {
   const AssistantsSection({
     super.key,
@@ -12,114 +20,137 @@ class AssistantsSection extends StatelessWidget {
   final bool isExpanded;
   final VoidCallback onToggle;
 
-  // Mock assistant data
-  static const List<Map<String, dynamic>> _assistants = [
-    {'icon': Icons.code_rounded, 'title': 'Software Engineer'},
-    {'icon': Icons.edit_rounded, 'title': 'Content Writer'},
-    {'icon': Icons.gavel_rounded, 'title': 'Legal Advisor'},
-    {'icon': Icons.campaign_rounded, 'title': 'Marketing'},
-  ];
-
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16),
-      child: Column(
-        children: [
-          SectionHeader(
-            title: 'ASSISTANTS',
-            isExpanded: isExpanded,
-            onToggle: onToggle,
-            trailing: Icon(
-              isExpanded ? Icons.keyboard_arrow_down_rounded : Icons.keyboard_arrow_right_rounded,
-              size: 20,
-              color: AppColors.darkMutedForeground.withValues(alpha: 0.6),
-            ),
+    return BlocBuilder<ChatBloc, ChatState>(
+      buildWhen: (a, b) => b is ChatLoaded,
+      builder: (context, state) {
+        final assistants =
+            state is ChatLoaded ? state.assistants : const <Assistant>[];
+        final selectedId =
+            state is ChatLoaded ? state.selectedAssistant?.id : null;
+
+        return Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          child: Column(
+            children: [
+              SectionHeader(
+                title: 'ASSISTANTS',
+                isExpanded: isExpanded,
+                onToggle: onToggle,
+                trailing: Icon(
+                  isExpanded
+                      ? Icons.keyboard_arrow_down_rounded
+                      : Icons.keyboard_arrow_right_rounded,
+                  size: 20,
+                  color: context.cMuted.withValues(alpha: 0.6),
+                ),
+              ),
+              if (isExpanded) ...[
+                const SizedBox(height: 8),
+                if (assistants.isEmpty)
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    child: Text(
+                      'Loading assistants…',
+                      style: TextStyle(
+                        color: context.cMuted.withValues(alpha: 0.7),
+                        fontSize: 13,
+                      ),
+                    ),
+                  )
+                else
+                  ...assistants.map((a) => _AssistantItem(
+                        assistant: a,
+                        selected: a.id == selectedId,
+                        onTap: () {
+                          context.read<ChatBloc>().add(ChatSelectAssistant(a));
+                          Navigator.of(context).pop(); // close drawer
+                        },
+                      )),
+              ],
+            ],
           ),
-          if (isExpanded) ...[
-            const SizedBox(height: 8),
-            ..._assistants.map((assistant) => _AssistantItem(
-              icon: assistant['icon'] as IconData,
-              title: assistant['title'] as String,
-              onTap: () {},
-            )),
-            const SizedBox(height: 8),
-            _LoadMoreButton(onTap: () {}),
-          ],
-        ],
-      ),
+        );
+      },
     );
   }
 }
 
 class _AssistantItem extends StatelessWidget {
   const _AssistantItem({
-    required this.icon,
-    required this.title,
+    required this.assistant,
+    required this.selected,
     required this.onTap,
   });
 
-  final IconData icon;
-  final String title;
+  final Assistant assistant;
+  final bool selected;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(8),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-          child: Row(
-            children: [
-              Icon(
-                icon,
-                size: 18,
-                color: AppColors.darkMutedForeground.withValues(alpha: 0.7),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Text(
-                  title,
-                  style: TextStyle(
-                    color: AppColors.darkForeground.withValues(alpha: 0.85),
-                    fontSize: 15,
-                    fontWeight: FontWeight.w400,
+    final isDark = context.isDark;
+    final accent = CatalogVisuals.assistantAccent(assistant, isDark: isDark);
+    final gradient = CatalogVisuals.assistantGradient(assistant, isDark: isDark);
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 4),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(10),
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 9),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(10),
+              color: selected ? accent.withValues(alpha: 0.16) : null,
+              border: selected
+                  ? Border.all(color: accent.withValues(alpha: 0.45))
+                  : null,
+            ),
+            child: Row(
+              children: [
+                // Icon tile tinted with the assistant's own gradient
+                Container(
+                  width: 32,
+                  height: 32,
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(9),
+                    gradient: LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [
+                        gradient.first.withValues(alpha: isDark ? 0.9 : 1),
+                        gradient.last.withValues(alpha: isDark ? 0.9 : 1),
+                      ],
+                    ),
+                  ),
+                  child: Icon(
+                    CatalogVisuals.assistantIcon(assistant.icon),
+                    size: 17,
+                    color: isDark ? Colors.white : Colors.black.withValues(alpha: 0.75),
                   ),
                 ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _LoadMoreButton extends StatelessWidget {
-  const _LoadMoreButton({required this.onTap});
-
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(8),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-          child: Center(
-            child: Text(
-              'Load More Assistants',
-              style: TextStyle(
-                color: AppColors.darkMutedForeground.withValues(alpha: 0.7),
-                fontSize: 14,
-                fontWeight: FontWeight.w500,
-              ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    assistant.name,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      color: context.cFg.withValues(alpha: 0.9),
+                      fontSize: 15,
+                      fontWeight:
+                          selected ? FontWeight.w600 : FontWeight.w400,
+                    ),
+                  ),
+                ),
+                if (selected)
+                  Icon(Icons.check_circle_rounded,
+                      size: 16, color: accent),
+              ],
             ),
           ),
         ),

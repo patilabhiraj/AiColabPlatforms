@@ -1,0 +1,170 @@
+import 'package:flutter/material.dart';
+
+import '../../domain/entities/assistant.dart';
+
+/// Visual helpers for models, capabilities and assistants.
+///
+/// The web app ships per-provider PNG logos; on Flutter we render a tinted
+/// avatar (brand colour + icon) derived from the model's `externalId`, so the
+/// picker stays recognisable without bundling image assets.
+class CatalogVisuals {
+  const CatalogVisuals._();
+
+  // ── Model provider colours (keyed by externalId prefix) ───────────────────
+  static const Map<String, Color> _providerColors = {
+    'openai': Color(0xFF10A37F),
+    'anthropic': Color(0xFFD97757),
+    'google': Color(0xFF4285F4),
+    'deepseek': Color(0xFF4D6BFE),
+    'moonshotai': Color(0xFF6E56CF),
+    'perplexity': Color(0xFF20B8CD),
+    'x-ai': Color(0xFF111111),
+  };
+
+  static String _providerKey(String externalId) {
+    final lower = externalId.toLowerCase();
+    for (final key in _providerColors.keys) {
+      if (lower.startsWith(key)) return key;
+    }
+    return '';
+  }
+
+  static Color modelColor(String externalId) {
+    return _providerColors[_providerKey(externalId)] ?? const Color(0xFF6366F1);
+  }
+
+  static IconData modelIcon(String externalId) {
+    switch (_providerKey(externalId)) {
+      case 'openai':
+        return Icons.bubble_chart_rounded;
+      case 'anthropic':
+        return Icons.auto_awesome_rounded;
+      case 'google':
+        return Icons.stars_rounded;
+      case 'deepseek':
+        return Icons.psychology_rounded;
+      case 'moonshotai':
+        return Icons.nightlight_round;
+      case 'perplexity':
+        return Icons.travel_explore_rounded;
+      case 'x-ai':
+        return Icons.bolt_rounded;
+      default:
+        return Icons.smart_toy_rounded;
+    }
+  }
+
+  // ── Capabilities ──────────────────────────────────────────────────────────
+  static IconData capabilityIcon(String capability) {
+    switch (capability) {
+      case 'WEB_SEARCH':
+        return Icons.search_rounded;
+      case 'IMAGE_GENERATION':
+        return Icons.image_rounded;
+      case 'STANDARD':
+      default:
+        return Icons.chat_bubble_outline_rounded;
+    }
+  }
+
+  static String capabilityLabel(String capability) {
+    switch (capability) {
+      case 'WEB_SEARCH':
+        return 'Web Search';
+      case 'IMAGE_GENERATION':
+        return 'Image Generation';
+      case 'STANDARD':
+      default:
+        return 'Standard Chat';
+    }
+  }
+
+  // ── Assistants ──────────────────────────────────────────────────────────--
+  /// Maps the backend's Lucide icon name to a Material icon.
+  static IconData assistantIcon(String lucideName) {
+    switch (lucideName.toLowerCase()) {
+      case 'code':
+      case 'code2':
+      case 'terminal':
+      case 'braces':
+        return Icons.code_rounded;
+      case 'penline':
+      case 'pen':
+      case 'pentool':
+      case 'edit':
+      case 'edit3':
+      case 'feather':
+        return Icons.edit_rounded;
+      case 'scale':
+      case 'gavel':
+      case 'landmark':
+        return Icons.gavel_rounded;
+      case 'megaphone':
+      case 'speaker':
+      case 'trendingup':
+        return Icons.campaign_rounded;
+      case 'palette':
+      case 'paintbrush':
+      case 'paintbucket':
+      case 'brush':
+      case 'figma':
+        return Icons.palette_rounded;
+      case 'globe':
+      case 'languages':
+        return Icons.public_rounded;
+      case 'briefcase':
+        return Icons.work_rounded;
+      case 'graduationcap':
+      case 'book':
+      case 'bookopen':
+        return Icons.school_rounded;
+      case 'sparkles':
+      case 'wand':
+      case 'wand2':
+        return Icons.auto_awesome_rounded;
+      case 'heart':
+      case 'stethoscope':
+        return Icons.favorite_rounded;
+      case 'calculator':
+      case 'sigma':
+        return Icons.calculate_rounded;
+      default:
+        return Icons.smart_toy_rounded;
+    }
+  }
+
+  /// Parses a hex colour string like `#f3e8ff` (or `f3e8ff`) into a [Color].
+  static Color? parseHex(String? hex) {
+    if (hex == null) return null;
+    var value = hex.trim().replaceAll('#', '');
+    if (value.length == 6) value = 'FF$value';
+    if (value.length != 8) return null;
+    final parsed = int.tryParse(value, radix: 16);
+    return parsed == null ? null : Color(parsed);
+  }
+
+  /// Gradient colours for an assistant, respecting the active brightness.
+  /// Falls back to a soft violet gradient when the assistant has none set.
+  static List<Color> assistantGradient(Assistant a, {required bool isDark}) {
+    final from = parseHex(isDark ? a.bgFromDark : a.bgFrom);
+    final via = parseHex(isDark ? a.bgViaDark : a.bgVia);
+    final to = parseHex(isDark ? a.bgToDark : a.bgTo);
+
+    final fallback = isDark
+        ? const [Color(0xFF312E81), Color(0xFF3B0764), Color(0xFF4C1D95)]
+        : const [Color(0xFFF3E8FF), Color(0xFFE9D5FF), Color(0xFFFCE7F3)];
+
+    final colors = <Color>[
+      from ?? fallback[0],
+      via ?? from ?? fallback[1],
+      to ?? fallback[2],
+    ];
+    return colors;
+  }
+
+  /// The dominant accent colour for an assistant (its `from` colour).
+  static Color assistantAccent(Assistant a, {required bool isDark}) {
+    return parseHex(isDark ? a.bgFromDark : a.bgFrom) ??
+        (isDark ? const Color(0xFF4C1D95) : const Color(0xFFC084FC));
+  }
+}

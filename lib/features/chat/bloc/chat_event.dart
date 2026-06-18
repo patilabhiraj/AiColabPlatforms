@@ -49,3 +49,32 @@ class ChatSubmitFeedback extends ChatEvent {
   final bool isPositive;
   ChatSubmitFeedback(this.chatId, this.messageId, this.isPositive);
 }
+
+// ── Catalog / model selection ─────────────────────────────────────────────────
+
+/// Fetch available models + assistants (called once after conversations load).
+class ChatLoadCatalog extends ChatEvent {}
+
+/// Toggle a model in the selection (respects single/multi mode + capability).
+class ChatToggleModel extends ChatEvent {
+  final int modelId;
+  ChatToggleModel(this.modelId);
+}
+
+/// Switch the active capability (STANDARD | WEB_SEARCH | IMAGE_GENERATION).
+class ChatSetCapability extends ChatEvent {
+  final String capability;
+  ChatSetCapability(this.capability);
+}
+
+/// Switch between single-model and multi-model comparison modes.
+class ChatSetMultiMode extends ChatEvent {
+  final bool multiMode;
+  ChatSetMultiMode(this.multiMode);
+}
+
+/// Select an assistant (null clears it) and start a fresh conversation.
+class ChatSelectAssistant extends ChatEvent {
+  final Assistant? assistant;
+  ChatSelectAssistant(this.assistant);
+}

@@ -4,6 +4,8 @@ import 'package:dio/dio.dart';
 import '../../../../core/constants/api_constants.dart';
 import '../../../../core/errors/exceptions.dart';
 import '../../../../core/utils/app_logger.dart';
+import '../models/ai_model_model.dart';
+import '../models/assistant_model.dart';
 import '../models/chat_context_model.dart';
 import '../models/chat_conversation_model.dart';
 import '../models/chat_message_model.dart';
@@ -15,8 +17,17 @@ abstract class ChatRemoteDataSource {
   Future<List<ChatConversationModel>> getConversations();
   Future<List<ChatMessageModel>> getMessages(String conversationId);
   Future<ChatMessageModel> sendMessage(String conversationId, String content);
-  Future<ChatConversationModel> createConversation(String firstMessage);
+  Future<ChatConversationModel> createConversation(
+    String firstMessage, {
+    List<int>? modelIds,
+    String? capability,
+    int? assistantId,
+  });
   Stream<String> sendMessageStream(String conversationId, String content);
+
+  // ── Catalog (models & assistants) ─────────────────────────────────────────
+  Future<List<AiModelModel>> getModels();
+  Future<List<AssistantModel>> getAssistants();
 
   // ── Chat CRUD ─────────────────────────────────────────────────────────────
   Future<List<ChatConversationModel>> listChats();
@@ -295,15 +306,25 @@ Stream<String> sendMessageStream(String conversationId, String content) async* {
   }
 }
   @override
-  Future<ChatConversationModel> createConversation(String firstMessage) async {
+  Future<ChatConversationModel> createConversation(
+    String firstMessage, {
+    List<int>? modelIds,
+    String? capability,
+    int? assistantId,
+  }) async {
     try {
       final title = firstMessage.length > 40
           ? '${firstMessage.substring(0, 40)}...'
           : firstMessage;
-      
+
       final response = await dio.post(
         ApiConstants.chats,
-        data: {'title': title},
+        data: {
+          'title': title,
+          if (modelIds != null && modelIds.isNotEmpty) 'modelIds': modelIds,
+          'capability': ?capability,
+          'assistantId': ?assistantId,
+        },
       );
 
       if (response.statusCode == 200 || response.statusCode == 201) {
@@ -325,6 +346,56 @@ Stream<String> sendMessageStream(String conversationId, String content) async* {
           message: e.message ?? 'Network error occurred',
         );
       }
+    } catch (e) {
+      throw ServerException(message: 'Unexpected error: $e');
+    }
+  }
+
+  // ── Catalog (models & assistants) ─────────────────────────────────────────
+
+  @override
+  Future<List<AiModelModel>> getModels() async {
+    try {
+      final response = await dio.get(
+        ApiConstants.models,
+        queryParameters: {'pageSize': '100'},
+      );
+      if (response.statusCode == 200) {
+        final data = _parseListResponse(response.data);
+        return data
+            .map((json) => AiModelModel.fromJson(json as Map<String, dynamic>))
+            .where((m) => m.isActive)
+            .toList();
+      }
+      throw ServerException(message: 'Failed to fetch models');
+    } on DioException catch (e) {
+      throw ServerException(message: e.response?.data is Map
+          ? (e.response?.data['message'] ?? 'Network error')
+          : (e.message ?? 'Network error'));
+    } catch (e) {
+      throw ServerException(message: 'Unexpected error: $e');
+    }
+  }
+
+  @override
+  Future<List<AssistantModel>> getAssistants() async {
+    try {
+      final response = await dio.get(
+        ApiConstants.assistants,
+        queryParameters: {'pageSize': '100'},
+      );
+      if (response.statusCode == 200) {
+        final data = _parseListResponse(response.data);
+        return data
+            .map((json) => AssistantModel.fromJson(json as Map<String, dynamic>))
+            .where((a) => a.isActive)
+            .toList();
+      }
+      throw ServerException(message: 'Failed to fetch assistants');
+    } on DioException catch (e) {
+      throw ServerException(message: e.response?.data is Map
+          ? (e.response?.data['message'] ?? 'Network error')
+          : (e.message ?? 'Network error'));
     } catch (e) {
       throw ServerException(message: 'Unexpected error: $e');
     }

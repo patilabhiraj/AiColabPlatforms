@@ -1,6 +1,8 @@
 import 'package:dartz/dartz.dart';
 import '../../../../core/errors/exceptions.dart';
 import '../../../../core/errors/failures.dart';
+import '../../domain/entities/ai_model.dart';
+import '../../domain/entities/assistant.dart';
 import '../../domain/entities/chat_context.dart';
 import '../../domain/entities/chat_conversation.dart';
 import '../../domain/entities/chat_message.dart';
@@ -51,9 +53,39 @@ class ChatRepositoryImpl implements ChatRepository {
   }
 
   @override
-  Future<Either<Failure, ChatConversation>> createConversation(String firstMessage) async {
+  Future<Either<Failure, ChatConversation>> createConversation(
+    String firstMessage, {
+    List<int>? modelIds,
+    String? capability,
+    int? assistantId,
+  }) async {
     try {
-      return Right(await remoteDataSource.createConversation(firstMessage));
+      return Right(await remoteDataSource.createConversation(
+        firstMessage,
+        modelIds: modelIds,
+        capability: capability,
+        assistantId: assistantId,
+      ));
+    } catch (e) {
+      return _handleError(e);
+    }
+  }
+
+  // ── Catalog (models & assistants) ─────────────────────────────────────────
+
+  @override
+  Future<Either<Failure, List<AiModel>>> getModels() async {
+    try {
+      return Right(await remoteDataSource.getModels());
+    } catch (e) {
+      return _handleError(e);
+    }
+  }
+
+  @override
+  Future<Either<Failure, List<Assistant>>> getAssistants() async {
+    try {
+      return Right(await remoteDataSource.getAssistants());
     } catch (e) {
       return _handleError(e);
     }

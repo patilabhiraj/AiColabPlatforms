@@ -70,6 +70,11 @@ abstract class ChatRemoteDataSource {
   Future<List<ChatContextModel>> getChatContexts(String id);
   Future<void> replaceChatContexts(String id, List<ChatContextModel> contexts);
 
+  // ── Message actions ───────────────────────────────────────────────────────
+  /// Rewrites [prompt] into a clearer, more detailed version via
+  /// `POST /api/messages/enhance`. Returns the enhanced prompt text.
+  Future<String> enhancePrompt(String prompt);
+
   // ── Message actions (streaming) ───────────────────────────────────────────
   Stream<String> regenerateMessage(String chatId, String messageId);
   Stream<String> editMessage(String chatId, String messageId, String newContent);
@@ -1022,6 +1027,45 @@ Map<String, dynamic> _cleanResponseContentAndExtractQuestions(String content) {
     } on DioException catch (e) {
       throw ServerException(message: e.response?.data['message'] ?? e.message ?? 'Network error');
     } catch (e) {
+      throw ServerException(message: 'Unexpected error: $e');
+    }
+  }
+
+  // ── Message actions ──────────────────────────────────────────────────────
+
+  @override
+  Future<String> enhancePrompt(String prompt) async {
+    try {
+      final response = await dio.post(
+        ApiConstants.messageEnhance,
+        data: {'prompt': prompt},
+      );
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        // Backend shape: { data: { enhancedPrompt } }. Be lenient about the
+        // envelope so a bare { enhancedPrompt } body also works.
+        final body = response.data;
+        final data = (body is Map && body['data'] is Map)
+            ? body['data'] as Map
+            : (body is Map ? body : const {});
+        final enhanced = data['enhancedPrompt']?.toString();
+
+        if (enhanced == null || enhanced.trim().isEmpty) {
+          throw ServerException(message: 'Empty enhanced prompt');
+        }
+        return enhanced.trim();
+      }
+      throw ServerException(message: 'Failed to enhance prompt');
+    } on DioException catch (e) {
+      logger.error('DioException in enhancePrompt', e);
+      throw ServerException(
+        message: e.response?.data is Map
+            ? (e.response?.data['message'] ?? 'Server error occurred')
+            : (e.message ?? 'Network error occurred'),
+      );
+    } catch (e) {
+      if (e is ServerException) rethrow;
+      logger.error('Unexpected error in enhancePrompt', e);
       throw ServerException(message: 'Unexpected error: $e');
     }
   }

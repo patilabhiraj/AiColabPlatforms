@@ -160,6 +160,16 @@ class ChatRepositoryImpl implements ChatRepository {
   }
 
   @override
+  Future<Either<Failure, String>> enhancePrompt(String prompt) async {
+    try {
+      final enhanced = await remoteDataSource.enhancePrompt(prompt);
+      return Right(enhanced);
+    } catch (e) {
+      return _handleError(e);
+    }
+  }
+
+  @override
   Stream<Either<Failure, String>> regenerateMessage(
     String chatId,
     String messageId,

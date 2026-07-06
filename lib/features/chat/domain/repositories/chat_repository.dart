@@ -66,6 +66,11 @@ abstract class ChatRepository {
   Future<Either<Failure, List<ChatContext>>> getChatContexts(String id);
   Future<Either<Failure, void>> replaceChatContexts(String id, List<ChatContext> contexts);
 
+  // ── Message actions ───────────────────────────────────────────────────────
+  /// Rewrites [prompt] into a clearer, more detailed version. Returns the
+  /// enhanced prompt text on success.
+  Future<Either<Failure, String>> enhancePrompt(String prompt);
+
   // ── Message actions (streaming) ───────────────────────────────────────────
   Stream<Either<Failure, String>> regenerateMessage(String chatId, String messageId);
   Stream<Either<Failure, String>> editMessage(String chatId, String messageId, String newContent);

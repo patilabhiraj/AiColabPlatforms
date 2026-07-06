@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
+import '../../../../app/injection.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../bloc/chat_bloc.dart';
 import '../../domain/entities/ai_model.dart';
+import '../../domain/repositories/chat_repository.dart';
 import 'catalog_visuals.dart';
 
 /// Chat composer with model selection, capabilities and single/multi mode —
@@ -28,6 +30,7 @@ class _ChatInputBarState extends State<ChatInputBar>
   final _focusNode = FocusNode();
   bool _hasText = false;
   bool _isFocused = false;
+  bool _isEnhancing = false;
   late AnimationController _animCtrl;
   late Animation<double> _scaleAnim;
 
@@ -65,6 +68,36 @@ class _ChatInputBarState extends State<ChatInputBar>
     _animCtrl.forward().then((_) => _animCtrl.reverse());
     _ctrl.clear();
     widget.onSend(text);
+  }
+
+  /// Rewrites the current draft into a clearer prompt via the backend and
+  /// replaces the text field with the result. No-op when empty or busy.
+  Future<void> _enhance() async {
+    final text = _ctrl.text.trim();
+    if (text.isEmpty || _isEnhancing || !widget.enabled) return;
+
+    setState(() => _isEnhancing = true);
+    final result = await sl<ChatRepository>().enhancePrompt(text);
+    if (!mounted) return;
+
+    result.fold(
+      (failure) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Could not enhance: ${failure.message}'),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      },
+      (enhanced) {
+        _ctrl.text = enhanced;
+        // Keep the caret at the end so the user can keep typing naturally.
+        _ctrl.selection =
+            TextSelection.collapsed(offset: _ctrl.text.length);
+      },
+    );
+
+    setState(() => _isEnhancing = false);
   }
 
   void _openComposerMenu() {
@@ -144,7 +177,15 @@ class _ChatInputBarState extends State<ChatInputBar>
                     icon: Icons.add_rounded,
                     onTap: widget.enabled ? _openComposerMenu : null,
                   ),
-                  const SizedBox(width: 8),
+                  const SizedBox(width: 4),
+
+                  // Enhance prompt (only actionable once there's a draft)
+                  _EnhanceButton(
+                    isEnhancing: _isEnhancing,
+                    // Enabled only when there's text and the composer is idle.
+                    onTap: (_hasText && widget.enabled) ? _enhance : null,
+                  ),
+                  const SizedBox(width: 4),
 
                   // Single / Multi toggle
                   const _ModeToggle(),
@@ -710,6 +751,67 @@ class _ModelRow extends StatelessWidget {
               ),
             ],
           ),
+        ),
+      ),
+    );
+  }
+}
+
+// ── Enhance prompt button ─────────────────────────────────────────────────────
+class _EnhanceButton extends StatelessWidget {
+  const _EnhanceButton({required this.isEnhancing, this.onTap});
+
+  final bool isEnhancing;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final accent = AppColors.landingPrimary;
+    final enabled = onTap != null && !isEnhancing;
+
+    return GestureDetector(
+      onTap: isEnhancing ? null : onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 150),
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+        decoration: BoxDecoration(
+          color: enabled
+              ? accent.withValues(alpha: 0.12)
+              : context.cCard.withValues(alpha: 0.3),
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+            color: enabled
+                ? accent.withValues(alpha: 0.35)
+                : context.cBorder.withValues(alpha: 0.3),
+          ),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (isEnhancing)
+              SizedBox(
+                width: 14,
+                height: 14,
+                child: CircularProgressIndicator(strokeWidth: 1.8, color: accent),
+              )
+            else
+              Icon(
+                Icons.auto_awesome_rounded,
+                size: 15,
+                color: enabled ? accent : context.cMuted.withValues(alpha: 0.5),
+              ),
+            const SizedBox(width: 5),
+            Text(
+              'Enhance',
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                color: enabled
+                    ? context.cFg
+                    : context.cMuted.withValues(alpha: 0.5),
+              ),
+            ),
+          ],
         ),
       ),
     );

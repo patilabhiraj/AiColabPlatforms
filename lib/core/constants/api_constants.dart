@@ -23,6 +23,7 @@ abstract final class ApiConstants {
   static String chatPrepareMulti(String id)  => '/api/chats/$id/prepare-multi'; // POST
 
   // ── Chat Messages ─────────────────────────────────────────────────────────────
+  static const String messageEnhance = '/api/messages/enhance'; // POST { prompt } → { enhancedPrompt }
   static String messageRegenerate(String chatId, String messageId)
       => '/api/chats/$chatId/messages/$messageId/regenerate'; // POST stream
   static String messageEdit(String chatId, String messageId)

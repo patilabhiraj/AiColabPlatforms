@@ -2,6 +2,7 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:get_it/get_it.dart';
 
 import '../core/network/api_client.dart';
+import '../core/theme/theme_controller.dart';
 import '../features/auth/bloc/auth_bloc.dart';
 import '../features/auth/bloc/forgot_password_bloc.dart';
 import '../features/auth/bloc/splash_bloc.dart';
@@ -36,6 +37,7 @@ void init() {
   // ── Core & External ──────────────────────────────────────────────────────
   sl.registerLazySingleton(() => ApiClient());
   sl.registerLazySingleton(() => const FlutterSecureStorage());
+  sl.registerLazySingleton(() => ThemeController());
 
   // ── Data Sources ──────────────────────────────────────────────────────────
   sl.registerLazySingleton<AuthLocalDataSource>(

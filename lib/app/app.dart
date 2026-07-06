@@ -5,6 +5,7 @@ import 'routes/router.dart';
 
 import 'package:flutter/material.dart';
 import '../core/theme/theme.dart';
+import '../core/theme/theme_controller.dart';
 import '../core/utils/app_logger.dart';
 import '../features/auth/bloc/auth_bloc.dart';
 import '../features/auth/bloc/forgot_password_bloc.dart';
@@ -28,17 +29,23 @@ class App extends StatelessWidget {
             context.go(AppRouter.splash);
           }
         },
-        child: MaterialApp.router(
-          title: 'ColabPlatforms AI',
-          debugShowCheckedModeBanner: false,
+        // Rebuild MaterialApp whenever the user toggles the theme so the whole
+        // app switches between light and dark instantly.
+        child: ListenableBuilder(
+          listenable: sl<ThemeController>(),
+          builder: (context, _) {
+            return MaterialApp.router(
+              title: 'ColabPlatforms AI',
+              debugShowCheckedModeBanner: false,
 
-          // ── Themes ──────────────────────────────────────────────────────────────
-          theme: AppTheme.light,
-          darkTheme: AppTheme.dark,
-          themeMode: ThemeMode.dark,
-          // themeMode: ThemeMode.system,
-          // ── GoRouter Config ─────────────────────────────────────────────────────
-          routerConfig: AppRouter.router,
+              // ── Themes ──────────────────────────────────────────────────────────
+              theme: AppTheme.dark,// light
+              darkTheme: AppTheme.dark,
+              themeMode: sl<ThemeController>().mode,
+              // ── GoRouter Config ─────────────────────────────────────────────────
+              routerConfig: AppRouter.router,
+            );
+          },
         ),
       ),
     );

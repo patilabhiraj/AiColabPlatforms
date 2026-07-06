@@ -4,6 +4,7 @@ import 'app/app.dart';
 import 'app/injection.dart' as di;
 import 'app/routes/router.dart';
 import 'core/error/error_handler.dart';
+import 'core/theme/theme_controller.dart';
 import 'core/utils/app_logger.dart';
 import 'features/auth/domain/usecases/get_cached_user_usecase.dart';
 
@@ -19,6 +20,9 @@ void main() async {
   
   // ── Initialize Dependency Injection ───────────────────────────────────────
   di.init();
+
+  // Load the saved light/dark theme preference before the first frame.
+  await di.sl<ThemeController>().load();
 
   // Force portrait orientation                               
   SystemChrome.setPreferredOrientations([

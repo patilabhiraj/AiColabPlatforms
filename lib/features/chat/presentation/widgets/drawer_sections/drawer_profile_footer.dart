@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import '../../../../../app/injection.dart';
 import '../../../../../core/theme/app_colors.dart';
+import '../../../../../core/theme/theme_controller.dart';
 import '../../../../../core/utils/app_logger.dart';
 import '../../../../auth/bloc/auth_bloc.dart';
 
@@ -122,6 +124,28 @@ class DrawerProfileFooter extends StatelessWidget {
                 ),
               ),
               
+              // Quick light/dark toggle
+              ListenableBuilder(
+                listenable: sl<ThemeController>(),
+                builder: (context, _) {
+                  final isDark = sl<ThemeController>().isDark;
+                  return IconButton(
+                    tooltip: isDark ? 'Switch to light mode' : 'Switch to dark mode',
+                    onPressed: () => sl<ThemeController>().toggle(context),
+                    icon: Icon(
+                      isDark
+                          ? Icons.light_mode_rounded
+                          : Icons.dark_mode_rounded,
+                      color: AppColors.landingPrimary.withValues(alpha: 0.9),
+                      size: 22,
+                    ),
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(),
+                  );
+                },
+              ),
+              const SizedBox(width: 4),
+
               // More options button
               IconButton(
                 onPressed: () => _showProfileOptions(context),
@@ -173,6 +197,25 @@ class DrawerProfileFooter extends StatelessWidget {
               onTap: () {
                 Navigator.pop(context);
                 logger.info('Navigate to help');
+              },
+            ),
+            // Light / dark mode switch
+            ListenableBuilder(
+              listenable: sl<ThemeController>(),
+              builder: (context, _) {
+                final isDark = sl<ThemeController>().isDark;
+                return SwitchListTile(
+                  secondary: Icon(
+                    isDark ? Icons.dark_mode_rounded : Icons.light_mode_rounded,
+                    color: AppColors.darkForeground,
+                  ),
+                  title: const Text('Dark mode',
+                      style: TextStyle(color: AppColors.darkForeground)),
+                  value: isDark,
+                  activeThumbColor: AppColors.landingPrimary,
+                  onChanged: (wantDark) => sl<ThemeController>()
+                      .setMode(wantDark ? ThemeMode.dark : ThemeMode.light),
+                );
               },
             ),
             const Divider(color: AppColors.darkBorder, height: 1),

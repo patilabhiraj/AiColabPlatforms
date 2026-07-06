@@ -143,7 +143,13 @@ class ChatsSection extends StatelessWidget {
                     }),
                     
                     const SizedBox(height: 8),
-                    _LoadMoreButton(onTap: () {}),
+                    if (state.hasMoreConversations)
+                      _LoadMoreButton(
+                        isLoading: state.isLoadingMoreConversations,
+                        onTap: () => context
+                            .read<ChatBloc>()
+                            .add(ChatLoadMoreConversations()),
+                      ),
                   ],
                 );
               },
@@ -255,28 +261,38 @@ class _ChatItem extends StatelessWidget {
 }
 
 class _LoadMoreButton extends StatelessWidget {
-  const _LoadMoreButton({required this.onTap});
+  const _LoadMoreButton({required this.onTap, this.isLoading = false});
 
   final VoidCallback onTap;
+  final bool isLoading;
 
   @override
   Widget build(BuildContext context) {
     return Material(
       color: Colors.transparent,
       child: InkWell(
-        onTap: onTap,
+        onTap: isLoading ? null : onTap,
         borderRadius: BorderRadius.circular(8),
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
           child: Center(
-            child: Text(
-              'Load More Chats',
-              style: TextStyle(
-                color: AppColors.darkMutedForeground.withValues(alpha: 0.7),
-                fontSize: 14,
-                fontWeight: FontWeight.w500,
-              ),
-            ),
+            child: isLoading
+                ? SizedBox(
+                    width: 16,
+                    height: 16,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: AppColors.darkMutedForeground.withValues(alpha: 0.7),
+                    ),
+                  )
+                : Text(
+                    'Load More Chats',
+                    style: TextStyle(
+                      color: AppColors.darkMutedForeground.withValues(alpha: 0.7),
+                      fontSize: 14,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
           ),
         ),
       ),

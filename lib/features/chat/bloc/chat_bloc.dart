@@ -789,17 +789,42 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
     return '';
   }
 
+  /// Strips only the trailing suggested-questions block from a streamed
+  /// answer, leaving the real content — including genuine code blocks — intact.
+  ///
+  /// The earlier version deleted everything between any pair of ``` fences (and
+  /// any `[".."]` array anywhere), which silently ate legitimate content: e.g. a
+  /// roadmap's sub-bullets vanished the moment the stream finished. We now reuse
+  /// the same conservative "trailing follow-up array only" logic the history
+  /// parser uses, so live streaming and reloaded history render identically.
   String _cleanStreamedContent(String content) {
-    return content
-        .replaceAll(RegExp(r'```json[\s\S]*?```', multiLine: true), '')
-        .replaceAll(RegExp(r'```[\s\S]*?```', multiLine: true), '')
-        .replaceAll(RegExp(r'\[\s*"[^"]*"(?:\s*,\s*"[^"]*")*\s*\]', multiLine: true), '')
-        .replaceAll('```json', '')
-        .replaceAll('```', '')
-        .replaceAll('***json', '')
-        .replaceAll('***', '')
+    final withoutQuestions = _stripTrailingQuestionArray(content);
+    return withoutQuestions
+        // Drop a lone ***json / *** marker some prompts emit around the block,
+        // but never a range spanning content.
+        .replaceAll(RegExp(r'\*\*\*json\s*', caseSensitive: false), '')
+        .replaceAll(RegExp(r'^\s*\*\*\*\s*$', multiLine: true), '')
         .replaceAll(RegExp(r'\n{3,}'), '\n\n')
         .trim();
+  }
+
+  /// Removes a trailing `["q1","q2"]` (optionally fenced in ```json```) that
+  /// carries follow-up questions, but only when nothing meaningful follows it —
+  /// so a JSON array in the middle of the real answer is never touched.
+  String _stripTrailingQuestionArray(String content) {
+    final pattern = RegExp(
+      r'(?:```(?:json)?\s*)?(\[\s*"(?:[^"\\]|\\.)*"(?:\s*,\s*"(?:[^"\\]|\\.)*")*\s*\])(?:\s*```)?',
+      caseSensitive: false,
+    );
+    final matches = pattern.allMatches(content).toList();
+    if (matches.isEmpty) return content;
+
+    final last = matches.last;
+    final trailing = content.substring(last.end);
+    // Only strip when the array sits at the very end of the message.
+    if (!RegExp(r'^(\s|`)*$').hasMatch(trailing)) return content;
+
+    return content.substring(0, last.start).replaceAll(RegExp(r'[\s`]+$'), '');
   }
 
   List<String> _extractSuggestedQuestions(String content) {

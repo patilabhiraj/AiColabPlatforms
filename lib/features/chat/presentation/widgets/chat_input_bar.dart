@@ -177,28 +177,27 @@ class _ChatInputBarState extends State<ChatInputBar>
                     icon: Icons.add_rounded,
                     onTap: widget.enabled ? _openComposerMenu : null,
                   ),
-                  const SizedBox(width: 4),
-
-                  // Enhance prompt (only actionable once there's a draft)
-                  _EnhanceButton(
-                    isEnhancing: _isEnhancing,
-                    // Enabled only when there's text and the composer is idle.
-                    onTap: (_hasText && widget.enabled) ? _enhance : null,
-                  ),
-                  const SizedBox(width: 4),
+                  // const SizedBox(width: 4),
 
                   // Single / Multi toggle
                   const _ModeToggle(),
 
-                  const Spacer(),
-
+                 const Spacer(),
+                  // Enhance prompt — only shown once the user has typed a draft.
+                  if (_hasText) ...[
+                    _EnhanceButton(
+                      isEnhancing: _isEnhancing,
+                      onTap: widget.enabled ? _enhance : null,
+                    ),
+                    const SizedBox(width: 4),
+                  ],
                   // Voice / Send button
                   if (!_hasText)
                     _IconButton(
                       icon: Icons.graphic_eq_rounded,
                       onTap: widget.enabled ? () {} : null,
                     )
-                  else
+                  else 
                     ScaleTransition(
                       scale: _scaleAnim,
                       child: GestureDetector(
@@ -282,11 +281,30 @@ class _SelectionPreview extends StatelessWidget {
 
         if (chips.isEmpty) return const SizedBox.shrink();
 
+        // A single horizontally-scrolling row keeps the composer height fixed
+        // no matter how many models are selected — the chips scroll sideways
+        // instead of wrapping into taller and taller rows.
         return Padding(
-          padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-          child: Align(
-            alignment: Alignment.centerLeft,
-            child: Wrap(spacing: 6, runSpacing: 6, children: chips),
+          padding: const EdgeInsets.fromLTRB(12, 12, 12, 0),
+          child: SizedBox(
+            height: 34,
+            child: ShaderMask(
+              // Fade the right edge so it's obvious more chips lie off-screen.
+              shaderCallback: (rect) => LinearGradient(
+                begin: Alignment.centerLeft,
+                end: Alignment.centerRight,
+                colors: const [Colors.white, Colors.white, Colors.transparent],
+                stops: const [0.0, 0.92, 1.0],
+              ).createShader(rect),
+              blendMode: BlendMode.dstIn,
+              child: ListView.separated(
+                scrollDirection: Axis.horizontal,
+                padding: const EdgeInsets.symmetric(horizontal: 4),
+                itemCount: chips.length,
+                separatorBuilder: (_, _) => const SizedBox(width: 6),
+                itemBuilder: (_, i) => Center(child: chips[i]),
+              ),
+            ),
           ),
         );
       },

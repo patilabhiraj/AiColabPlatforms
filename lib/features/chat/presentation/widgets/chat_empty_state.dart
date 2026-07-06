@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../../core/theme/app_colors.dart';
+import '../../../auth/bloc/auth_bloc.dart';
 import '../../bloc/chat_bloc.dart';
 import '../../domain/entities/assistant.dart';
+import '../../domain/entities/chat_conversation.dart';
 import 'catalog_visuals.dart';
 
 /// Premium Empty State with Interactive Elements.
@@ -36,29 +38,23 @@ class ChatEmptyState extends StatelessWidget {
   }
 
   // ── Default greeting ────────────────────────────────────────────────────--
+  /// A calm, ChatGPT/Claude-style welcome: a small labelled greeting, a bold
+  /// headline, and (when one exists) a "Continue" card to resume the most
+  /// recent conversation.
   Widget _buildGreeting(BuildContext context) {
-    // Quick-start prompts mirror the web new-chat screen (Brainstorm / Write /
-    // Explain) — tapping one pre-fills the composer via [onSuggestion].
-    const quickStarts = <_QuickStart>[
-      _QuickStart(
-        icon: Icons.auto_awesome_rounded,
-        title: 'Brainstorm ideas',
-        subtitle: 'Spark creativity for your next project',
-        prompt: 'Brainstorm ideas for ',
-      ),
-      _QuickStart(
-        icon: Icons.edit_note_rounded,
-        title: 'Help me write',
-        subtitle: 'Draft an email, post or document',
-        prompt: 'Help me write a ',
-      ),
-      _QuickStart(
-        icon: Icons.school_rounded,
-        title: 'Explain a concept',
-        subtitle: 'Understand any topic clearly',
-        prompt: 'Explain how ',
-      ),
-    ];
+    // First name for the greeting label (falls back to a plain greeting).
+    final authState = context.watch<AuthBloc>().state;
+    final firstName =
+        authState is AuthAuthenticated ? authState.user.firstName.trim() : '';
+
+    // Most recent conversation, if the list has loaded, for the Continue card.
+    final chatState = context.watch<ChatBloc>().state;
+    final recent = chatState is ChatLoaded && chatState.conversations.isNotEmpty
+        ? chatState.conversations.first
+        : null;
+
+    final greeting =
+        firstName.isNotEmpty ? '${_getGreeting()}, $firstName' : _getGreeting();
 
     return Container(
       decoration: BoxDecoration(
@@ -73,59 +69,72 @@ class ChatEmptyState extends StatelessWidget {
           stops: const [0.0, 0.3, 1.0],
         ),
       ),
-      child: Center(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.fromLTRB(24, 48, 24, 24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const SizedBox(height: 8),
-              const _AiOrb(),
-              const SizedBox(height: 32),
-              _FadeInText(
-                text: '${_getGreeting()}!',
-                delay: 200,
-                style: TextStyle(
-                  color: context.cFg,
-                  fontSize: 34,
-                  fontWeight: FontWeight.w800,
-                  letterSpacing: -0.5,
-                ),
-              ),
-              const SizedBox(height: 12),
-              _FadeInText(
-                text: 'How can I help you today?',
-                delay: 350,
-                style: TextStyle(
-                  color: context.cMuted.withValues(alpha: 0.85),
-                  fontSize: 17,
-                  height: 1.5,
-                ),
-              ),
-              const SizedBox(height: 36),
-              // Quick-start cards
-              for (var i = 0; i < quickStarts.length; i++) ...[
-                _FadeInSlide(
-                  delay: 500 + i * 120,
-                  child: _QuickStartCard(
-                    data: quickStarts[i],
-                    onTap: () => onSuggestion(quickStarts[i].prompt),
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.fromLTRB(24, 40, 24, 24),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const SizedBox(height: 8),
+            // ── Small labelled greeting (orb + "Good evening, Abhiraj") ──────
+            _FadeInSlide(
+              delay: 150,
+              child: Row(
+                children: [
+                  const _MiniOrb(),
+                  const SizedBox(width: 10),
+                  Flexible(
+                    child: Text(
+                      greeting,
+                      style: TextStyle(
+                        color: context.cMuted.withValues(alpha: 0.9),
+                        fontSize: 15,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
                   ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 20),
+
+            // ── Bold headline, last line accented ────────────────────────────
+            _FadeInSlide(
+              delay: 300,
+              child: RichText(
+                text: TextSpan(
+                  style: TextStyle(
+                    color: context.cFg,
+                    fontSize: 40,
+                    fontWeight: FontWeight.w800,
+                    height: 1.1,
+                    letterSpacing: -1.0,
+                  ),
+                  children: [
+                    const TextSpan(text: 'What should\nwe figure out\n'),
+                    TextSpan(
+                      text: 'together?',
+                      style: const TextStyle(color: AppColors.landingPrimary),
+                    ),
+                  ],
                 ),
-                if (i != quickStarts.length - 1) const SizedBox(height: 12),
-              ],
-              const SizedBox(height: 28),
-              _FadeInText(
-                text: 'Powered by advanced AI models',
-                delay: 900,
-                style: TextStyle(
-                  color: context.cMuted.withValues(alpha: 0.55),
-                  fontSize: 12.5,
-                  fontWeight: FontWeight.w500,
+              ),
+            ),
+
+            // ── Continue card (only when there's a recent chat) ──────────────
+            if (recent != null) ...[
+              const SizedBox(height: 48),
+              _FadeInSlide(
+                delay: 450,
+                child: _ContinueCard(
+                  conversation: recent,
+                  onTap: () => context
+                      .read<ChatBloc>()
+                      .add(ChatSelectConversation(recent)),
                 ),
               ),
             ],
-          ),
+          ],
         ),
       ),
     );
@@ -222,21 +231,6 @@ class ChatEmptyState extends StatelessWidget {
   }
 }
 
-// ── Quick-start data ──────────────────────────────────────────────────────────
-class _QuickStart {
-  const _QuickStart({
-    required this.icon,
-    required this.title,
-    required this.subtitle,
-    required this.prompt,
-  });
-
-  final IconData icon;
-  final String title;
-  final String subtitle;
-  final String prompt;
-}
-
 // ── Animated AI orb ───────────────────────────────────────────────────────────
 /// A softly breathing, glowing gradient orb — the signature "AI" visual that
 /// anchors the welcome screen.
@@ -312,17 +306,69 @@ class _AiOrbState extends State<_AiOrb> with SingleTickerProviderStateMixin {
   }
 }
 
-// ── Quick-start card ──────────────────────────────────────────────────────────
-class _QuickStartCard extends StatelessWidget {
-  const _QuickStartCard({required this.data, required this.onTap});
+// ── Mini orb (inline greeting badge) ──────────────────────────────────────────
+/// A small static version of the AI orb used beside the greeting label.
+class _MiniOrb extends StatelessWidget {
+  const _MiniOrb();
 
-  final _QuickStart data;
+  @override
+  Widget build(BuildContext context) {
+    const primary = AppColors.landingPrimary;
+    return Container(
+      width: 28,
+      height: 28,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            Color.lerp(primary, Colors.white, 0.25)!,
+            primary,
+          ],
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: primary.withValues(alpha: 0.4),
+            blurRadius: 10,
+            spreadRadius: 1,
+          ),
+        ],
+      ),
+      child: const Icon(
+        Icons.auto_awesome_rounded,
+        color: Colors.white,
+        size: 15,
+      ),
+    );
+  }
+}
+
+// ── Continue card (resume most recent chat) ───────────────────────────────────
+class _ContinueCard extends StatelessWidget {
+  const _ContinueCard({required this.conversation, required this.onTap});
+
+  final ChatConversation conversation;
   final VoidCallback onTap;
+
+  /// Short "2m ago" / "3h ago" / "5d ago" style relative time.
+  String _relativeTime(DateTime time) {
+    final diff = DateTime.now().difference(time);
+    if (diff.inMinutes < 1) return 'just now';
+    if (diff.inMinutes < 60) return '${diff.inMinutes}m ago';
+    if (diff.inHours < 24) return '${diff.inHours}h ago';
+    if (diff.inDays < 7) return '${diff.inDays}d ago';
+    return '${(diff.inDays / 7).floor()}w ago';
+  }
 
   @override
   Widget build(BuildContext context) {
     const accent = AppColors.landingPrimary;
     final isDark = context.isDark;
+    final title = conversation.title.trim().isNotEmpty
+        ? conversation.title.trim()
+        : 'Untitled chat';
+
     return Material(
       color: Colors.transparent,
       child: InkWell(
@@ -335,47 +381,39 @@ class _QuickStartCard extends StatelessWidget {
             border: Border.all(color: context.cBorder.withValues(alpha: 0.5)),
           ),
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
             child: Row(
               children: [
-                // Icon tile
+                // Small "in progress" dot
                 Container(
-                  width: 42,
-                  height: 42,
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(12),
-                    gradient: LinearGradient(
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                      colors: [
-                        accent.withValues(alpha: 0.9),
-                        accent.withValues(alpha: 0.55),
-                      ],
-                    ),
+                  width: 8,
+                  height: 8,
+                  margin: const EdgeInsets.only(right: 12),
+                  decoration: const BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: accent,
                   ),
-                  child: Icon(data.icon, color: Colors.white, size: 22),
                 ),
-                const SizedBox(width: 14),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        data.title,
+                        'Continue — $title',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                         style: TextStyle(
                           color: context.cFg,
-                          fontSize: 15.5,
+                          fontSize: 15,
                           fontWeight: FontWeight.w600,
                           letterSpacing: -0.2,
                         ),
                       ),
                       const SizedBox(height: 3),
                       Text(
-                        data.subtitle,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
+                        _relativeTime(conversation.updatedAt),
                         style: TextStyle(
-                          color: context.cMuted.withValues(alpha: 0.75),
+                          color: context.cMuted.withValues(alpha: 0.7),
                           fontSize: 12.5,
                           height: 1.3,
                         ),
@@ -385,8 +423,8 @@ class _QuickStartCard extends StatelessWidget {
                 ),
                 const SizedBox(width: 8),
                 Icon(
-                  Icons.arrow_outward_rounded,
-                  size: 18,
+                  Icons.chevron_right_rounded,
+                  size: 20,
                   color: context.cMuted.withValues(alpha: 0.55),
                 ),
               ],
@@ -496,67 +534,3 @@ class _PromptChip extends StatelessWidget {
 
 
 
-// ── Fade In Text ──────────────────────────────────────────────────────────────
-class _FadeInText extends StatefulWidget {
-  const _FadeInText({
-    required this.text,
-    required this.delay,
-    required this.style,
-  });
-
-  final String text;
-  final int delay;
-  final TextStyle style;
-
-  @override
-  State<_FadeInText> createState() => _FadeInTextState();
-}
-
-class _FadeInTextState extends State<_FadeInText> with SingleTickerProviderStateMixin {
-  late AnimationController _ctrl;
-  late Animation<double> _fadeAnim;
-  late Animation<Offset> _slideAnim;
-
-  @override
-  void initState() {
-    super.initState();
-    _ctrl = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 600),
-    );
-    
-    _fadeAnim = Tween<double>(begin: 0.0, end: 1.0).animate(
-      CurvedAnimation(parent: _ctrl, curve: Curves.easeOut),
-    );
-    
-    _slideAnim = Tween<Offset>(
-      begin: const Offset(0, 0.3),
-      end: Offset.zero,
-    ).animate(CurvedAnimation(parent: _ctrl, curve: Curves.easeOut));
-    
-    Future.delayed(Duration(milliseconds: widget.delay), () {
-      if (mounted) _ctrl.forward();
-    });
-  }
-
-  @override
-  void dispose() {
-    _ctrl.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return FadeTransition(
-      opacity: _fadeAnim,
-      child: SlideTransition(
-        position: _slideAnim,
-        child: Text(
-          widget.text,
-          textAlign: TextAlign.center,
-          style: widget.style,
-        ),
-      ),
-    );
-  }
-}

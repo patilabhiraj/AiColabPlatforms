@@ -91,38 +91,25 @@ class _ChatPageState extends State<ChatPage> {
                         _isStreaming = streaming;
                       },
                       builder: (context, state) {
-                      if (state is ChatLoading) {
-                        return Center(
-                          child: Column(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Container(
-                                width: 60,
-                                height: 60,
-                                decoration: BoxDecoration(
-                                  shape: BoxShape.circle,
-                                  gradient: LinearGradient(
-                                    colors: [
-                                      AppColors.landingPrimary.withValues(alpha: 0.2),
-                                      AppColors.landingPrimary.withValues(alpha: 0.1),
-                                    ],
-                                  ),
-                                ),
-                                child: const CircularProgressIndicator(
-                                  color: AppColors.landingPrimary,
-                                  strokeWidth: 3,
-                                ),
+                      // On startup (ChatInitial / ChatLoading) show the home
+                      // screen immediately instead of a blocking spinner —
+                      // conversations keep loading in the background. This
+                      // mirrors ChatGPT / Claude / Gemini, which never gate the
+                      // composer behind a full-screen loader.
+                      if (state is ChatInitial || state is ChatLoading) {
+                        return Column(
+                          children: [
+                            Expanded(
+                              child: ChatEmptyState(
+                                onSuggestion: (text) => context
+                                    .read<ChatBloc>()
+                                    .add(ChatSendMessageStreaming(text)),
                               ),
-                              const SizedBox(height: 16),
-                              Text(
-                                'Loading...',
-                                style: TextStyle(
-                                  color: context.cMuted.withValues(alpha: 0.8),
-                                  fontSize: 14,
-                                ),
-                              ),
-                            ],
-                          ),
+                            ),
+                            // Composer is visible but disabled until the chat
+                            // shell (models/assistants) has loaded.
+                            ChatInputBar(enabled: false, onSend: (_) {}),
+                          ],
                         );
                       }
 

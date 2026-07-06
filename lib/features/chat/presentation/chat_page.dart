@@ -73,13 +73,22 @@ class _ChatPageState extends State<ChatPage> {
                         return curr.messages.length > prev.messages.length ||
                             curr.isStreaming != prev.isStreaming ||
                             (curr.isStreaming &&
-                                curr.streamingContent != prev.streamingContent);
+                                curr.streamingContent != prev.streamingContent) ||
+                            // Follow multi-model streaming (content changes in place).
+                            (curr.messages.isNotEmpty &&
+                                prev.messages.isNotEmpty &&
+                                curr.messages.last != prev.messages.last);
                       },
                       listener: (context, state) {
                         if (state is! ChatLoaded) return;
+                        final liveMulti = state.messages.isNotEmpty &&
+                            !state.messages.last.isUser &&
+                            state.messages.last.isMultiModel &&
+                            state.isSending;
+                        final streaming = state.isStreaming || liveMulti;
                         // Instant jump while streaming, smooth animate for new messages
                         _scrollToBottom(animated: !_isStreaming);
-                        _isStreaming = state.isStreaming;
+                        _isStreaming = streaming;
                       },
                       builder: (context, state) {
                       if (state is ChatLoading) {
@@ -410,7 +419,14 @@ class _MessagesList extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final itemCount = messages.length + (isStreaming ? 1 : (isSending ? 1 : 0));
+    // In multi-model mode the live assistant message is already in [messages]
+    // (its per-model slots update in place), so no extra streaming/typing item
+    // is needed even though isSending stays true until all models finish.
+    final lastIsLiveMulti = messages.isNotEmpty &&
+        messages.last.isMultiModel &&
+        !messages.last.isUser;
+    final extra = lastIsLiveMulti ? 0 : (isStreaming ? 1 : (isSending ? 1 : 0));
+    final itemCount = messages.length + extra;
 
     return ListView.builder(
       controller: scrollCtrl,

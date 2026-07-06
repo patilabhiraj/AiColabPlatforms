@@ -5,6 +5,8 @@ import 'package:flutter_markdown/flutter_markdown.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../bloc/chat_bloc.dart';
 import '../../domain/entities/chat_message.dart';
+import '../../domain/entities/model_response.dart';
+import 'catalog_visuals.dart';
 
 class ChatBubble extends StatelessWidget {
   const ChatBubble({
@@ -119,6 +121,22 @@ class _AiBubble extends StatelessWidget {
     final card = context.cCard;
     final border = context.cBorder;
 
+    final multi = message.isMultiModel;
+
+    // In multi-model mode the displayed content / status comes from the active
+    // model's slot; otherwise from the message itself.
+    final ModelResponse? active = multi ? _activeResponse() : null;
+    final String displayContent = multi ? active!.content : message.content;
+    final bool slotStreaming =
+        multi && active!.status == ModelResponseStatus.streaming;
+    final bool slotFailed =
+        multi && active!.status == ModelResponseStatus.failed;
+    // Suppress the action bar while any model in this message is still going.
+    final bool anyStreaming = multi
+        ? message.modelResponses
+            .any((r) => r.status == ModelResponseStatus.streaming)
+        : isStreaming;
+
     return Align(
       alignment: Alignment.centerLeft,
       child: ConstrainedBox(
@@ -127,8 +145,10 @@ class _AiBubble extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           mainAxisSize: MainAxisSize.min,
           children: [
-            // Model name label (e.g. "GPT-5.4")
-            if (message.modelName != null && message.modelName!.isNotEmpty)
+            // Model tabs (multi-model) or single model name label.
+            if (multi)
+              _ModelTabs(message: message)
+            else if (message.modelName != null && message.modelName!.isNotEmpty)
               Padding(
                 padding: const EdgeInsets.only(left: 2, bottom: 6),
                 child: Row(
@@ -176,25 +196,36 @@ class _AiBubble extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Expanded(
-                        child: MarkdownBody(
-                          data: message.content,
-                          selectable: !isStreaming,
-                          styleSheet: MarkdownStyleSheet(
-                            p: TextStyle(color: fg, fontSize: 15, height: 1.6, letterSpacing: 0.1),
-                            strong: TextStyle(color: fg, fontSize: 15, fontWeight: FontWeight.bold, height: 1.6, letterSpacing: 0.1),
-                            code: TextStyle(
-                              backgroundColor: card.withValues(alpha: 0.5),
-                              color: AppColors.landingPrimary,
-                              fontSize: 14,
-                            ),
-                            codeblockDecoration: BoxDecoration(
-                              color: card.withValues(alpha: context.isDark ? 0.3 : 0.8),
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                          ),
-                        ),
+                        child: displayContent.isEmpty && slotStreaming
+                            ? _BlinkingCursor()
+                            : MarkdownBody(
+                                data: displayContent,
+                                selectable: !anyStreaming,
+                                styleSheet: MarkdownStyleSheet(
+                                  p: TextStyle(
+                                      color: slotFailed ? context.cError : fg,
+                                      fontSize: 15,
+                                      height: 1.6,
+                                      letterSpacing: 0.1),
+                                  strong: TextStyle(color: fg, fontSize: 15, fontWeight: FontWeight.bold, height: 1.6, letterSpacing: 0.1),
+                                  code: TextStyle(
+                                    backgroundColor: card.withValues(alpha: 0.5),
+                                    color: AppColors.landingPrimary,
+                                    fontSize: 14,
+                                  ),
+                                  codeblockDecoration: BoxDecoration(
+                                    color: card.withValues(alpha: context.isDark ? 0.3 : 0.8),
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                ),
+                              ),
                       ),
-                      if (isStreaming)
+                      // A trailing cursor is only needed when there is already
+                      // some text to trail. `multi ? slotStreaming : isStreaming`
+                      // avoids showing two cursors on a multi-model bubble, where
+                      // both flags can be true at once.
+                      if ((multi ? slotStreaming : isStreaming) &&
+                          displayContent.isNotEmpty)
                         Padding(
                           padding: const EdgeInsets.only(left: 4, top: 4),
                           child: _BlinkingCursor(),
@@ -202,10 +233,19 @@ class _AiBubble extends StatelessWidget {
                     ],
                   ),
 
-                  // Action bar (hidden while streaming)
-                  if (!isStreaming) ...[
+                  // Action bar (hidden while anything is streaming). In
+                  // multi-model mode `message.content` is empty — the answer
+                  // lives in the active model's slot — so pass [displayContent]
+                  // as the text that copy/regenerate should act on.
+                  if (!anyStreaming) ...[
                     const SizedBox(height: 10),
-                    _ActionBar(message: message, chatId: chatId, muted: muted, card: card),
+                    _ActionBar(
+                      message: message,
+                      actionContent: displayContent,
+                      chatId: chatId,
+                      muted: muted,
+                      card: card,
+                    ),
                   ],
                 ],
               ),
@@ -215,18 +255,119 @@ class _AiBubble extends StatelessWidget {
       ),
     );
   }
+
+  /// The model response for the currently-active tab (falls back to first).
+  ModelResponse _activeResponse() {
+    return message.modelResponses.firstWhere(
+      (r) => r.modelId == message.activeModelId,
+      orElse: () => message.modelResponses.first,
+    );
+  }
+}
+
+// ── Per-model tab strip (multi-model messages) ────────────────────────────────
+class _ModelTabs extends StatelessWidget {
+  const _ModelTabs({required this.message});
+
+  final ChatMessage message;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(left: 2, bottom: 8),
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        child: Row(
+          children: message.modelResponses.map((mr) {
+            final active = mr.modelId == message.activeModelId;
+            final color = CatalogVisuals.modelColor(mr.externalId);
+            return Padding(
+              padding: const EdgeInsets.only(right: 6),
+              child: GestureDetector(
+                onTap: () => context
+                    .read<ChatBloc>()
+                    .add(ChatSelectModelTab(message.id, mr.modelId)),
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 150),
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: active
+                        ? color.withValues(alpha: 0.14)
+                        : context.cCard.withValues(alpha: 0.4),
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(
+                      color: active
+                          ? color.withValues(alpha: 0.5)
+                          : context.cBorder.withValues(alpha: 0.4),
+                    ),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(CatalogVisuals.modelIcon(mr.externalId), size: 13, color: color),
+                      const SizedBox(width: 5),
+                      Text(
+                        mr.modelName,
+                        style: TextStyle(
+                          color: active
+                              ? context.cFg
+                              : context.cMuted.withValues(alpha: 0.85),
+                          fontSize: 12,
+                          fontWeight: active ? FontWeight.w600 : FontWeight.w500,
+                        ),
+                      ),
+                      const SizedBox(width: 5),
+                      _StatusDot(status: mr.status, color: color),
+                    ],
+                  ),
+                ),
+              ),
+            );
+          }).toList(),
+        ),
+      ),
+    );
+  }
+}
+
+class _StatusDot extends StatelessWidget {
+  const _StatusDot({required this.status, required this.color});
+  final ModelResponseStatus status;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    switch (status) {
+      case ModelResponseStatus.streaming:
+        return SizedBox(
+          width: 8,
+          height: 8,
+          child: CircularProgressIndicator(strokeWidth: 1.5, color: color),
+        );
+      case ModelResponseStatus.failed:
+        return Icon(Icons.error_outline_rounded, size: 11, color: context.cError);
+      case ModelResponseStatus.completed:
+        return Icon(Icons.check_circle, size: 11, color: color.withValues(alpha: 0.8));
+    }
+  }
 }
 
 // ── Action Bar ────────────────────────────────────────────────────────────────
 class _ActionBar extends StatelessWidget {
   const _ActionBar({
     required this.message,
+    required this.actionContent,
     required this.muted,
     required this.card,
     this.chatId,
   });
 
   final ChatMessage message;
+
+  /// The text copy/share should act on. In multi-model mode this is the active
+  /// model's answer (since [message.content] is empty there); in single-model
+  /// mode it equals [message.content].
+  final String actionContent;
   final Color muted;
   final Color card;
   final String? chatId;
@@ -241,7 +382,7 @@ class _ActionBar extends StatelessWidget {
           icon: Icons.copy_rounded,
           color: muted,
           card: card,
-          onTap: () => _copy(context, message.content),
+          onTap: () => _copy(context, actionContent),
         ),
         const SizedBox(width: 6),
 

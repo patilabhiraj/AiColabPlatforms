@@ -4,6 +4,9 @@ abstract class ChatEvent {}
 
 class ChatLoadConversations extends ChatEvent {}
 
+/// Loads the next page of conversations for the sidebar "Load More Chats".
+class ChatLoadMoreConversations extends ChatEvent {}
+
 class ChatSelectConversation extends ChatEvent {
   final ChatConversation conversation;
   ChatSelectConversation(this.conversation);
@@ -77,4 +80,28 @@ class ChatSetMultiMode extends ChatEvent {
 class ChatSelectAssistant extends ChatEvent {
   final Assistant? assistant;
   ChatSelectAssistant(this.assistant);
+}
+
+/// Switch which model's tab is shown on a multi-model assistant message.
+class ChatSelectModelTab extends ChatEvent {
+  final String messageId;
+  final int modelId;
+  ChatSelectModelTab(this.messageId, this.modelId);
+}
+
+/// Internal: a per-model stream produced a new chunk for [messageId].
+class ChatModelChunk extends ChatEvent {
+  final String messageId;
+  final int modelId;
+  final String content;
+  ChatModelChunk(this.messageId, this.modelId, this.content);
+}
+
+/// Internal: a per-model stream finished (completed or failed) for [messageId].
+class ChatModelDone extends ChatEvent {
+  final String messageId;
+  final int modelId;
+  final bool failed;
+  final String? errorContent;
+  ChatModelDone(this.messageId, this.modelId, {this.failed = false, this.errorContent});
 }

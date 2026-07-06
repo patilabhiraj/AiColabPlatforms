@@ -5,12 +5,20 @@ import '../entities/assistant.dart';
 import '../entities/chat_context.dart';
 import '../entities/chat_conversation.dart';
 import '../entities/chat_message.dart';
+import '../entities/multi_model.dart';
+import '../entities/paginated_conversations.dart';
 import '../entities/shared_chat.dart';
 import '../entities/user_context.dart';
 
 abstract class ChatRepository {
   // ── Legacy (kept for backward compatibility) ──────────────────────────────
   Future<Either<Failure, List<ChatConversation>>> getConversations();
+
+  /// Fetches one page of conversations for the sidebar's "Load More" pagination.
+  Future<Either<Failure, PaginatedConversations>> getConversationsPage({
+    required int page,
+    int pageSize,
+  });
   Future<Either<Failure, List<ChatMessage>>> getMessages(String conversationId);
   Future<Either<Failure, ChatMessage>> sendMessage(String conversationId, String content);
   Future<Either<Failure, ChatConversation>> createConversation(
@@ -26,6 +34,21 @@ abstract class ChatRepository {
 
   // ── Streaming ─────────────────────────────────────────────────────────────
   Stream<Either<Failure, String>> sendMessageStream(String conversationId, String content);
+
+  // ── Multi-model send ──────────────────────────────────────────────────────
+  Future<Either<Failure, PrepareMultiResult>> prepareMulti(
+    String conversationId,
+    String content,
+  );
+
+  /// Per-model stream. Yields [ModelStreamChunk]s tagged with [modelId].
+  Stream<Either<Failure, ModelStreamChunk>> sendMessageStreamForModel(
+    String conversationId,
+    String content,
+    int modelId, {
+    int userMessageId,
+    int assistantMessageId,
+  });
 
   // ── Chat CRUD ─────────────────────────────────────────────────────────────
   Future<Either<Failure, List<ChatConversation>>> listChats();

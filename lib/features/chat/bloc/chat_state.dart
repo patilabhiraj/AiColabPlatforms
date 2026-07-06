@@ -15,6 +15,16 @@ class ChatLoaded extends ChatState {
   final String? streamingMessageId;
   final List<ChatMessage> starredMessages;
 
+  // ── Conversation list pagination ──────────────────────────────────────────
+  /// Highest conversation page loaded so far (starts at 1).
+  final int conversationsPage;
+
+  /// Whether the backend has more conversation pages to load.
+  final bool hasMoreConversations;
+
+  /// True while a "Load More Chats" request is in flight.
+  final bool isLoadingMoreConversations;
+
   // ── Model selection / capabilities ────────────────────────────────────────
   /// All active models available for selection (from `/api/models`).
   final List<AiModel> availableModels;
@@ -40,6 +50,9 @@ class ChatLoaded extends ChatState {
     this.streamingContent,
     this.streamingMessageId,
     this.starredMessages = const [],
+    this.conversationsPage = 1,
+    this.hasMoreConversations = false,
+    this.isLoadingMoreConversations = false,
     this.availableModels = const [],
     this.selectedModelIds = const [],
     this.capability = 'STANDARD',
@@ -60,6 +73,9 @@ class ChatLoaded extends ChatState {
     bool clearStreaming = false,
     String? streamingMessageId,
     List<ChatMessage>? starredMessages,
+    int? conversationsPage,
+    bool? hasMoreConversations,
+    bool? isLoadingMoreConversations,
     List<AiModel>? availableModels,
     List<int>? selectedModelIds,
     String? capability,
@@ -78,6 +94,10 @@ class ChatLoaded extends ChatState {
       streamingContent: clearStreaming ? null : (streamingContent ?? this.streamingContent),
       streamingMessageId: clearStreaming ? null : (streamingMessageId ?? this.streamingMessageId),
       starredMessages: starredMessages ?? this.starredMessages,
+      conversationsPage: conversationsPage ?? this.conversationsPage,
+      hasMoreConversations: hasMoreConversations ?? this.hasMoreConversations,
+      isLoadingMoreConversations:
+          isLoadingMoreConversations ?? this.isLoadingMoreConversations,
       availableModels: availableModels ?? this.availableModels,
       selectedModelIds: selectedModelIds ?? this.selectedModelIds,
       capability: capability ?? this.capability,

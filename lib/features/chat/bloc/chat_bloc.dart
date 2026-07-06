@@ -8,6 +8,8 @@ import '../domain/entities/ai_model.dart';
 import '../domain/entities/assistant.dart';
 import '../domain/entities/chat_conversation.dart';
 import '../domain/entities/chat_message.dart';
+import '../domain/entities/model_response.dart';
+import '../domain/entities/multi_model.dart';
 import '../domain/repositories/chat_repository.dart';
 import '../domain/usecases/create_conversation_usecase.dart';
 import '../domain/usecases/get_assistants_usecase.dart';
@@ -38,6 +40,7 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
     this._repository,
   ) : super(ChatInitial()) {
     on<ChatLoadConversations>(_onLoadConversations);
+    on<ChatLoadMoreConversations>(_onLoadMoreConversations);
     on<ChatSelectConversation>(_onSelectConversation);
     on<ChatSendMessage>(_onSendMessage);
     on<ChatSendMessageStreaming>(_onSendMessageStreaming);
@@ -52,6 +55,9 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
     on<ChatSetCapability>(_onSetCapability);
     on<ChatSetMultiMode>(_onSetMultiMode);
     on<ChatSelectAssistant>(_onSelectAssistant);
+    on<ChatSelectModelTab>(_onSelectModelTab);
+    on<ChatModelChunk>(_onModelChunk);
+    on<ChatModelDone>(_onModelDone);
   }
 
   Future<void> _onLoadConversations(
@@ -59,13 +65,61 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
     Emitter<ChatState> emit,
   ) async {
     emit(ChatLoading());
-    final result = await _getConversations();
+    // Load only the first page (5 chats); the rest come via "Load More Chats".
+    final result = await _getConversations.page(page: 1, pageSize: _conversationsPageSize);
     result.fold(
       (failure) => emit(ChatError(failure.message)),
-      (conversations) => emit(ChatLoaded(conversations: conversations)),
+      (paged) => emit(ChatLoaded(
+        conversations: paged.conversations,
+        conversationsPage: paged.page,
+        hasMoreConversations: paged.hasNextPage,
+      )),
     );
     // Load models + assistants in the background once the chat shell is ready.
     if (state is ChatLoaded) add(ChatLoadCatalog());
+  }
+
+  static const int _conversationsPageSize = 5;
+
+  Future<void> _onLoadMoreConversations(
+    ChatLoadMoreConversations event,
+    Emitter<ChatState> emit,
+  ) async {
+    if (state is! ChatLoaded) return;
+    final current = state as ChatLoaded;
+    // Guard against double-taps and requesting past the last page.
+    if (current.isLoadingMoreConversations || !current.hasMoreConversations) {
+      return;
+    }
+
+    emit(current.copyWith(isLoadingMoreConversations: true));
+
+    final nextPage = current.conversationsPage + 1;
+    final result = await _getConversations.page(
+      page: nextPage,
+      pageSize: _conversationsPageSize,
+    );
+    if (state is! ChatLoaded) return;
+    final latest = state as ChatLoaded;
+
+    result.fold(
+      (_) => emit(latest.copyWith(isLoadingMoreConversations: false)),
+      (paged) {
+        // Append, de-duplicating by id so an overlapping page can't create
+        // duplicate rows.
+        final existingIds = latest.conversations.map((c) => c.id).toSet();
+        final merged = [
+          ...latest.conversations,
+          ...paged.conversations.where((c) => !existingIds.contains(c.id)),
+        ];
+        emit(latest.copyWith(
+          conversations: merged,
+          conversationsPage: paged.page,
+          hasMoreConversations: paged.hasNextPage,
+          isLoadingMoreConversations: false,
+        ));
+      },
+    );
   }
 
   // ── Catalog: models & assistants ──────────────────────────────────────────
@@ -207,15 +261,29 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
     if (state is! ChatLoaded) return;
     final current = state as ChatLoaded;
 
+    // Open the selected conversation immediately (mirrors ChatGPT): show it as
+    // selected, clear any previous/streaming messages and start loading.
     emit(current.copyWith(
       selectedConversation: event.conversation,
+      clearAssistant: true,
       messages: [],
       isSending: false,
+      clearStreaming: true,
     ));
 
     final result = await _getMessages(event.conversation.id);
+    if (state is! ChatLoaded) return;
     result.fold(
-      (_) {},
+      (failure) => emit((state as ChatLoaded).copyWith(
+        messages: [
+          ChatMessage(
+            id: 'load_error',
+            content: 'Could not load this chat. ${failure.message}',
+            isUser: false,
+            timestamp: DateTime.now(),
+          ),
+        ],
+      )),
       (messages) => emit((state as ChatLoaded).copyWith(messages: messages)),
     );
   }
@@ -488,20 +556,38 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
       conversationId = current.selectedConversation!.id;
     }
 
+    if (state is! ChatLoaded) return;
+    final selectedIds = (state as ChatLoaded).selectedModelIds;
+
+    if (selectedIds.length > 1) {
+      await _streamMultiModel(conversationId, event.content, selectedIds, emit);
+    } else {
+      final modelId = selectedIds.isNotEmpty ? selectedIds.first : 0;
+      await _streamSingleModel(conversationId, event.content, modelId, emit);
+    }
+  }
+
+  // ── Single-model streaming ────────────────────────────────────────────────
+  Future<void> _streamSingleModel(
+    String conversationId,
+    String content,
+    int modelId,
+    Emitter<ChatState> emit,
+  ) async {
     final streamingMessageId = 'ai_${DateTime.now().millisecondsSinceEpoch}';
 
-    await emit.forEach<Either<Failure, String>>(
-      _repository.sendMessageStream(conversationId, event.content),
+    await emit.forEach<Either<Failure, ModelStreamChunk>>(
+      _repository.sendMessageStreamForModel(conversationId, content, modelId),
       onData: (either) {
         return either.fold(
           (failure) {
             if (state is! ChatLoaded) return state;
             return (state as ChatLoaded).copyWith(isSending: false, clearStreaming: true);
           },
-          (content) {
+          (chunk) {
             if (state is! ChatLoaded) return state;
             return (state as ChatLoaded).copyWith(
-              streamingContent: content,
+              streamingContent: chunk.content,
               streamingMessageId: streamingMessageId,
               isSending: true,
             );
@@ -517,6 +603,7 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
       final rawContent = finalState.streamingContent!;
       final suggestedQuestions = _extractSuggestedQuestions(rawContent);
       final cleanedContent = _cleanStreamedContent(rawContent);
+      final modelName = _modelName(modelId);
 
       emit(finalState.copyWith(
         messages: [
@@ -526,13 +613,180 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
             content: cleanedContent,
             isUser: false,
             timestamp: DateTime.now(),
+            modelName: modelName,
             suggestedQuestions: suggestedQuestions.isNotEmpty ? suggestedQuestions : null,
           ),
         ],
         isSending: false,
         clearStreaming: true,
       ));
+    } else {
+      emit(finalState.copyWith(isSending: false, clearStreaming: true));
     }
+  }
+
+  // ── Multi-model streaming ─────────────────────────────────────────────────
+  Future<void> _streamMultiModel(
+    String conversationId,
+    String content,
+    List<int> modelIds,
+    Emitter<ChatState> emit,
+  ) async {
+    // 1. Reserve the shared user + assistant message ids on the backend.
+    final prepResult = await _repository.prepareMulti(conversationId, content);
+    final prep = prepResult.fold((_) => null, (r) => r);
+    if (prep == null) {
+      if (state is ChatLoaded) {
+        emit((state as ChatLoaded).copyWith(isSending: false, clearStreaming: true));
+      }
+      return;
+    }
+
+    if (state is! ChatLoaded) return;
+    final base = state as ChatLoaded;
+
+    // 2. Seed a single assistant message holding one slot per model.
+    final messageId = 'multi_${prep.assistantMessageId}';
+    final responses = modelIds
+        .map((id) => ModelResponse(
+              modelId: id,
+              modelName: _modelName(id) ?? 'AI',
+              externalId: _externalId(id),
+            ))
+        .toList();
+
+    emit(base.copyWith(
+      messages: [
+        ...base.messages,
+        ChatMessage(
+          id: messageId,
+          content: '',
+          isUser: false,
+          timestamp: DateTime.now(),
+          modelResponses: responses,
+          activeModelId: modelIds.first,
+        ),
+      ],
+      isSending: true,
+    ));
+
+    // 3. Fan out one stream per model WITHOUT awaiting here: chunks are routed
+    //    back through internal events, which can only be processed once this
+    //    handler returns. Completion is tracked in [_onModelDone].
+    for (final modelId in modelIds) {
+      _runModelStream(conversationId, content, modelId, messageId, prep);
+    }
+  }
+
+  /// Drives one model's stream, forwarding chunks/completion as internal events.
+  Future<void> _runModelStream(
+    String conversationId,
+    String content,
+    int modelId,
+    String messageId,
+    PrepareMultiResult prep,
+  ) async {
+    try {
+      await for (final either in _repository.sendMessageStreamForModel(
+        conversationId,
+        content,
+        modelId,
+        userMessageId: prep.userMessageId,
+        assistantMessageId: prep.assistantMessageId,
+      )) {
+        either.fold(
+          (failure) => add(ChatModelDone(messageId, modelId,
+              failed: true, errorContent: failure.message)),
+          (chunk) => add(ChatModelChunk(messageId, modelId, chunk.content)),
+        );
+      }
+      add(ChatModelDone(messageId, modelId));
+    } catch (e) {
+      add(ChatModelDone(messageId, modelId, failed: true, errorContent: '$e'));
+    }
+  }
+
+  void _onModelChunk(ChatModelChunk event, Emitter<ChatState> emit) {
+    if (state is! ChatLoaded) return;
+    emit(_updateModelResponse(
+      state as ChatLoaded,
+      event.messageId,
+      event.modelId,
+      (mr) => mr.copyWith(
+        content: _cleanStreamedContent(event.content),
+        status: ModelResponseStatus.streaming,
+      ),
+    ));
+  }
+
+  void _onModelDone(ChatModelDone event, Emitter<ChatState> emit) {
+    if (state is! ChatLoaded) return;
+    final updated = _updateModelResponse(
+      state as ChatLoaded,
+      event.messageId,
+      event.modelId,
+      (mr) => mr.copyWith(
+        content: event.failed && mr.content.isEmpty
+            ? (event.errorContent ?? 'Failed to generate a response.')
+            : mr.content,
+        status: event.failed
+            ? ModelResponseStatus.failed
+            : ModelResponseStatus.completed,
+      ),
+    );
+
+    // Once every model in this message has finished, re-enable the composer.
+    final msg = updated.messages.firstWhere(
+      (m) => m.id == event.messageId,
+      orElse: () => updated.messages.last,
+    );
+    final allDone = msg.modelResponses
+        .every((mr) => mr.status != ModelResponseStatus.streaming);
+
+    emit(updated.copyWith(isSending: !allDone));
+  }
+
+  void _onSelectModelTab(ChatSelectModelTab event, Emitter<ChatState> emit) {
+    if (state is! ChatLoaded) return;
+    final current = state as ChatLoaded;
+    final messages = current.messages.map((m) {
+      if (m.id != event.messageId) return m;
+      return m.copyWith(activeModelId: event.modelId);
+    }).toList();
+    emit(current.copyWith(messages: messages));
+  }
+
+  /// Replaces one model's slot inside the assistant message [messageId].
+  ChatLoaded _updateModelResponse(
+    ChatLoaded current,
+    String messageId,
+    int modelId,
+    ModelResponse Function(ModelResponse) update,
+  ) {
+    final messages = current.messages.map((m) {
+      if (m.id != messageId) return m;
+      final updated = m.modelResponses
+          .map((mr) => mr.modelId == modelId ? update(mr) : mr)
+          .toList();
+      return m.copyWith(modelResponses: updated);
+    }).toList();
+    return current.copyWith(messages: messages);
+  }
+
+  String? _modelName(int modelId) {
+    if (state is! ChatLoaded) return null;
+    for (final m in (state as ChatLoaded).availableModels) {
+      if (m.id == modelId) return m.name;
+    }
+    return null;
+  }
+
+  String _externalId(int modelId) {
+    if (state is! ChatLoaded) return '';
+    for (final m in (state as ChatLoaded).availableModels) {
+      if (m.id == modelId) return m.externalId;
+    }
+    return '';
   }
 
   String _cleanStreamedContent(String content) {

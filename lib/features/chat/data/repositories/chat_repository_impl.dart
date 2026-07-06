@@ -6,6 +6,8 @@ import '../../domain/entities/assistant.dart';
 import '../../domain/entities/chat_context.dart';
 import '../../domain/entities/chat_conversation.dart';
 import '../../domain/entities/chat_message.dart';
+import '../../domain/entities/multi_model.dart';
+import '../../domain/entities/paginated_conversations.dart';
 import '../../domain/entities/shared_chat.dart';
 import '../../domain/entities/user_context.dart';
 import '../../domain/repositories/chat_repository.dart';
@@ -29,6 +31,21 @@ class ChatRepositoryImpl implements ChatRepository {
   Future<Either<Failure, List<ChatConversation>>> getConversations() async {
     try {
       return Right(await remoteDataSource.getConversations());
+    } catch (e) {
+      return _handleError(e);
+    }
+  }
+
+  @override
+  Future<Either<Failure, PaginatedConversations>> getConversationsPage({
+    required int page,
+    int pageSize = 5,
+  }) async {
+    try {
+      return Right(await remoteDataSource.getConversationsPage(
+        page: page,
+        pageSize: pageSize,
+      ));
     } catch (e) {
       return _handleError(e);
     }
@@ -101,6 +118,41 @@ class ChatRepositoryImpl implements ChatRepository {
     try {
       await for (final token in remoteDataSource.sendMessageStream(conversationId, content)) {
         yield Right(token);
+      }
+    } catch (e) {
+      yield _handleError(e);
+    }
+  }
+
+  @override
+  Future<Either<Failure, PrepareMultiResult>> prepareMulti(
+    String conversationId,
+    String content,
+  ) async {
+    try {
+      return Right(await remoteDataSource.prepareMulti(conversationId, content));
+    } catch (e) {
+      return _handleError(e);
+    }
+  }
+
+  @override
+  Stream<Either<Failure, ModelStreamChunk>> sendMessageStreamForModel(
+    String conversationId,
+    String content,
+    int modelId, {
+    int userMessageId = 0,
+    int assistantMessageId = 0,
+  }) async* {
+    try {
+      await for (final chunk in remoteDataSource.sendMessageStreamForModel(
+        conversationId,
+        content,
+        modelId,
+        userMessageId: userMessageId,
+        assistantMessageId: assistantMessageId,
+      )) {
+        yield Right(chunk);
       }
     } catch (e) {
       yield _handleError(e);

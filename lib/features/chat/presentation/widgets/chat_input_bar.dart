@@ -215,11 +215,19 @@ class _SelectionPreview extends StatelessWidget {
         // Selected model chips (only meaningful in multi mode)
         if (state.multiMode && state.selectedModelIds.length > 1) {
           for (final id in state.selectedModelIds) {
-            final model = state.availableModels.firstWhere(
-              (m) => m.id == id,
-              orElse: () => const AiModel(id: -1, name: ''),
-            );
-            if (model.id == -1) continue;
+            // NB: `availableModels` may hold `AiModelModel` (a subtype) at
+            // runtime, so `firstWhere(orElse: …)` reifies the orElse return
+            // type as that subtype and throws if we return a plain `AiModel`.
+            // A nullable lookup avoids that covariance trap entirely.
+            AiModel? found;
+            for (final m in state.availableModels) {
+              if (m.id == id) {
+                found = m;
+                break;
+              }
+            }
+            if (found == null) continue;
+            final model = found;
             chips.add(_Pill(
               icon: CatalogVisuals.modelIcon(model.externalId),
               iconColor: CatalogVisuals.modelColor(model.externalId),

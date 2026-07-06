@@ -8,13 +8,22 @@ import '../models/ai_model_model.dart';
 import '../models/assistant_model.dart';
 import '../models/chat_context_model.dart';
 import '../models/chat_conversation_model.dart';
+import '../../domain/entities/multi_model.dart';
 import '../models/chat_message_model.dart';
+import '../models/paginated_conversations_model.dart';
 import '../models/shared_chat_model.dart';
 import '../models/user_context_model.dart';
 
 abstract class ChatRemoteDataSource {
   // ── Core chat ─────────────────────────────────────────────────────────────
   Future<List<ChatConversationModel>> getConversations();
+
+  /// Fetches one page of conversations. Returns the items plus whether a next
+  /// page exists (backend `{ data: [...], hasNextPage }`).
+  Future<PaginatedConversationsModel> getConversationsPage({
+    required int page,
+    int pageSize,
+  });
   Future<List<ChatMessageModel>> getMessages(String conversationId);
   Future<ChatMessageModel> sendMessage(String conversationId, String content);
   Future<ChatConversationModel> createConversation(
@@ -24,6 +33,22 @@ abstract class ChatRemoteDataSource {
     int? assistantId,
   });
   Stream<String> sendMessageStream(String conversationId, String content);
+
+  // ── Multi-model send ──────────────────────────────────────────────────────
+  /// Persists the user message + a shared assistant message, returning their
+  /// ids. Call before fanning out one [sendMessageStreamForModel] per model.
+  Future<PrepareMultiResult> prepareMulti(String conversationId, String content);
+
+  /// Streams a single model's answer for [modelId]. When [userMessageId] /
+  /// [assistantMessageId] are non-zero the backend appends to those shared
+  /// messages (multi-model); pass 0 for a plain single-model send.
+  Stream<ModelStreamChunk> sendMessageStreamForModel(
+    String conversationId,
+    String content,
+    int modelId, {
+    int userMessageId = 0,
+    int assistantMessageId = 0,
+  });
 
   // ── Catalog (models & assistants) ─────────────────────────────────────────
   Future<List<AiModelModel>> getModels();
@@ -101,14 +126,51 @@ class ChatRemoteDataSourceImpl implements ChatRemoteDataSource {
   }
 
   @override
-  Future<List<ChatMessageModel>> getMessages(String conversationId) async {
+  Future<PaginatedConversationsModel> getConversationsPage({
+    required int page,
+    int pageSize = 5,
+  }) async {
     try {
       final response = await dio.get(
-        ApiConstants.chatMessages(conversationId),
+        ApiConstants.chats,
+        queryParameters: {
+          'page': page.toString(),
+          'pageSize': pageSize.toString(),
+          'isArchived': 'false',
+        },
       );
 
       if (response.statusCode == 200) {
-        final data = _parseListResponse(response.data);
+        return PaginatedConversationsModel.fromJson(
+          response.data as Map<String, dynamic>,
+          requestedPage: page,
+        );
+      }
+      throw ServerException(
+        message: response.data['message'] ?? 'Failed to fetch conversations',
+      );
+    } on DioException catch (e) {
+      throw ServerException(
+        message: e.response?.data is Map
+            ? (e.response?.data['message'] ?? 'Server error occurred')
+            : (e.message ?? 'Network error occurred'),
+      );
+    } catch (e) {
+      throw ServerException(message: 'Unexpected error: $e');
+    }
+  }
+
+  @override
+  Future<List<ChatMessageModel>> getMessages(String conversationId) async {
+    try {
+      // The backend has no dedicated /messages route (returns 404); messages
+      // are embedded in the chat-detail response at GET /api/chats/{id}.
+      final response = await dio.get(
+        ApiConstants.chatById(conversationId),
+      );
+
+      if (response.statusCode == 200) {
+        final data = _parseMessagesFromChat(response.data);
         return data
             .map((json) => ChatMessageModel.fromJson(json as Map<String, dynamic>))
             .toList();
@@ -305,6 +367,115 @@ Stream<String> sendMessageStream(String conversationId, String content) async* {
     throw ServerException(message: 'Unexpected error: $e');
   }
 }
+
+  // ── Multi-model send ──────────────────────────────────────────────────────
+
+  @override
+  Future<PrepareMultiResult> prepareMulti(
+    String conversationId,
+    String content,
+  ) async {
+    try {
+      final response = await dio.post(
+        ApiConstants.chatPrepareMulti(conversationId),
+        data: {'content': content},
+      );
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        final body = response.data as Map<String, dynamic>;
+        final data = (body['data'] ?? body) as Map<String, dynamic>;
+        return PrepareMultiResult(
+          userMessageId: (data['userMessageId'] as num?)?.toInt() ?? 0,
+          assistantMessageId: (data['assistantMessageId'] as num?)?.toInt() ?? 0,
+        );
+      }
+      throw ServerException(message: 'Failed to prepare messages');
+    } on DioException catch (e) {
+      logger.error('DioException in prepareMulti', e);
+      throw ServerException(
+        message: e.response?.data['message'] ?? 'Server error occurred',
+      );
+    } catch (e) {
+      logger.error('Unexpected error in prepareMulti', e);
+      throw ServerException(message: 'Unexpected error: $e');
+    }
+  }
+
+  @override
+  Stream<ModelStreamChunk> sendMessageStreamForModel(
+    String conversationId,
+    String content,
+    int modelId, {
+    int userMessageId = 0,
+    int assistantMessageId = 0,
+  }) async* {
+    try {
+      final response = await dio.post(
+        ApiConstants.chatSend(conversationId),
+        data: {
+          'content': content,
+          'modelId': modelId,
+          if (userMessageId != 0) 'userMessageId': userMessageId,
+          if (assistantMessageId != 0) 'assistantMessageId': assistantMessageId,
+        },
+        options: Options(responseType: ResponseType.stream),
+      );
+
+      if (response.statusCode != 200 && response.statusCode != 201) {
+        throw ServerException(message: 'Failed to send message');
+      }
+
+      final stream = (response.data as ResponseBody).stream;
+      final StringBuffer contentBuffer = StringBuffer();
+      String partialLine = '';
+
+      final textStream = stream.cast<List<int>>().transform(utf8.decoder);
+
+      await for (final chunk in textStream) {
+        final combined = partialLine + chunk;
+        final lines = combined.split('\n');
+        partialLine = lines.removeLast();
+
+        for (final line in lines) {
+          if (!line.startsWith('data: ')) continue;
+          final dataStr = line.substring(6).trim();
+          if (dataStr == '[DONE]') return;
+
+          try {
+            final data = jsonDecode(dataStr) as Map<String, dynamic>;
+            final type = data['type'] as String?;
+            if (type == 'token') {
+              final token = data['content'] as String?;
+              if (token != null) {
+                contentBuffer.write(token);
+                yield ModelStreamChunk(
+                  modelId: modelId,
+                  content: contentBuffer.toString(),
+                );
+              }
+            } else if (type == 'error') {
+              throw ServerException(
+                message: data['message']?.toString() ?? 'Generation failed',
+              );
+            }
+            // 'message_id' / 'done' carry no display content here.
+          } catch (e) {
+            if (e is ServerException) rethrow;
+            logger.debug('Failed to parse SSE line: $dataStr');
+          }
+        }
+      }
+    } on DioException catch (e) {
+      logger.error('DioException in sendMessageStreamForModel', e);
+      throw ServerException(
+        message: e.response?.data['message'] ?? 'Server error occurred',
+      );
+    } catch (e) {
+      if (e is ServerException) rethrow;
+      logger.error('Unexpected error in sendMessageStreamForModel', e);
+      throw ServerException(message: 'Unexpected error: $e');
+    }
+  }
+
   @override
   Future<ChatConversationModel> createConversation(
     String firstMessage, {
@@ -636,6 +807,26 @@ Stream<String> sendMessageStream(String conversationId, String content) async* {
     } catch (e) {
       throw ServerException(message: 'Unexpected error: $e');
     }
+  }
+
+  /// Extracts the message list from a chat-detail response.
+  ///
+  /// The backend has no `/messages` route (returns 404); messages are embedded
+  /// in `GET /api/chats/{id}`. The web frontend reads them from
+  /// `res.data.data.messages` (see `app/(chat)/c/[id]/page.tsx`), so we unwrap
+  /// the `{status, data, message}` envelope and read `data.messages`.
+  List<dynamic> _parseMessagesFromChat(dynamic responseData) {
+    if (responseData is List) return responseData;
+    if (responseData is! Map<String, dynamic>) {
+      throw ServerException(message: 'Invalid response format');
+    }
+
+    // Unwrap {status, data, message} — the chat object lives in `data`.
+    final chat = responseData['data'];
+    if (chat is! Map<String, dynamic>) return [];
+
+    final messages = chat['messages'];
+    return messages is List ? messages : [];
   }
 
   /// Parses API list responses that may be wrapped in pagination envelopes.

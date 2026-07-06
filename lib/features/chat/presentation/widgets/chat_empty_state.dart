@@ -37,6 +37,29 @@ class ChatEmptyState extends StatelessWidget {
 
   // ── Default greeting ────────────────────────────────────────────────────--
   Widget _buildGreeting(BuildContext context) {
+    // Quick-start prompts mirror the web new-chat screen (Brainstorm / Write /
+    // Explain) — tapping one pre-fills the composer via [onSuggestion].
+    const quickStarts = <_QuickStart>[
+      _QuickStart(
+        icon: Icons.auto_awesome_rounded,
+        title: 'Brainstorm ideas',
+        subtitle: 'Spark creativity for your next project',
+        prompt: 'Brainstorm ideas for ',
+      ),
+      _QuickStart(
+        icon: Icons.edit_note_rounded,
+        title: 'Help me write',
+        subtitle: 'Draft an email, post or document',
+        prompt: 'Help me write a ',
+      ),
+      _QuickStart(
+        icon: Icons.school_rounded,
+        title: 'Explain a concept',
+        subtitle: 'Understand any topic clearly',
+        prompt: 'Explain how ',
+      ),
+    ];
+
     return Container(
       decoration: BoxDecoration(
         gradient: RadialGradient(
@@ -52,38 +75,53 @@ class ChatEmptyState extends StatelessWidget {
       ),
       child: Center(
         child: SingleChildScrollView(
-          padding: const EdgeInsets.fromLTRB(20, 80, 20, 32),
+          padding: const EdgeInsets.fromLTRB(24, 48, 24, 24),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const SizedBox(height: 40),
+              const SizedBox(height: 8),
+              const _AiOrb(),
+              const SizedBox(height: 32),
               _FadeInText(
                 text: '${_getGreeting()}!',
                 delay: 200,
                 style: TextStyle(
                   color: context.cFg,
-                  fontSize: 36,
+                  fontSize: 34,
                   fontWeight: FontWeight.w800,
                   letterSpacing: -0.5,
                 ),
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 12),
               _FadeInText(
                 text: 'How can I help you today?',
-                delay: 400,
+                delay: 350,
                 style: TextStyle(
                   color: context.cMuted.withValues(alpha: 0.85),
                   fontSize: 17,
                   height: 1.5,
                 ),
               ),
-              const SizedBox(height: 60),
+              const SizedBox(height: 36),
+              // Quick-start cards
+              for (var i = 0; i < quickStarts.length; i++) ...[
+                _FadeInSlide(
+                  delay: 500 + i * 120,
+                  child: _QuickStartCard(
+                    data: quickStarts[i],
+                    onTap: () => onSuggestion(quickStarts[i].prompt),
+                  ),
+                ),
+                if (i != quickStarts.length - 1) const SizedBox(height: 12),
+              ],
+              const SizedBox(height: 28),
               _FadeInText(
                 text: 'Powered by advanced AI models',
-                delay: 600,
+                delay: 900,
                 style: TextStyle(
-                  color: context.cMuted.withValues(alpha: 0.6),
-                  fontSize: 13,
+                  color: context.cMuted.withValues(alpha: 0.55),
+                  fontSize: 12.5,
+                  fontWeight: FontWeight.w500,
                 ),
               ),
             ],
@@ -180,6 +218,229 @@ class ChatEmptyState extends StatelessWidget {
           ),
         ),
       ),
+    );
+  }
+}
+
+// ── Quick-start data ──────────────────────────────────────────────────────────
+class _QuickStart {
+  const _QuickStart({
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+    required this.prompt,
+  });
+
+  final IconData icon;
+  final String title;
+  final String subtitle;
+  final String prompt;
+}
+
+// ── Animated AI orb ───────────────────────────────────────────────────────────
+/// A softly breathing, glowing gradient orb — the signature "AI" visual that
+/// anchors the welcome screen.
+class _AiOrb extends StatefulWidget {
+  const _AiOrb();
+
+  @override
+  State<_AiOrb> createState() => _AiOrbState();
+}
+
+class _AiOrbState extends State<_AiOrb> with SingleTickerProviderStateMixin {
+  late final AnimationController _ctrl = AnimationController(
+    vsync: this,
+    duration: const Duration(seconds: 4),
+  )..repeat(reverse: true);
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    const primary = AppColors.landingPrimary;
+    return AnimatedBuilder(
+      animation: _ctrl,
+      builder: (context, _) {
+        final t = Curves.easeInOut.transform(_ctrl.value);
+        final scale = 0.94 + t * 0.06;
+        final glow = 0.35 + t * 0.35;
+        return Container(
+          width: 96,
+          height: 96,
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            boxShadow: [
+              BoxShadow(
+                color: primary.withValues(alpha: glow * 0.5),
+                blurRadius: 40 + t * 20,
+                spreadRadius: 4 + t * 6,
+              ),
+            ],
+          ),
+          child: Transform.scale(
+            scale: scale,
+            child: Container(
+              width: 72,
+              height: 72,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [
+                    Color.lerp(primary, Colors.white, 0.25)!,
+                    primary,
+                    Color.lerp(primary, Colors.black, 0.25)!,
+                  ],
+                ),
+              ),
+              child: Icon(
+                Icons.auto_awesome_rounded,
+                color: Colors.white.withValues(alpha: 0.95),
+                size: 34,
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+}
+
+// ── Quick-start card ──────────────────────────────────────────────────────────
+class _QuickStartCard extends StatelessWidget {
+  const _QuickStartCard({required this.data, required this.onTap});
+
+  final _QuickStart data;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    const accent = AppColors.landingPrimary;
+    final isDark = context.isDark;
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(18),
+        child: Ink(
+          decoration: BoxDecoration(
+            color: context.cCard.withValues(alpha: isDark ? 0.45 : 0.85),
+            borderRadius: BorderRadius.circular(18),
+            border: Border.all(color: context.cBorder.withValues(alpha: 0.5)),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+            child: Row(
+              children: [
+                // Icon tile
+                Container(
+                  width: 42,
+                  height: 42,
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(12),
+                    gradient: LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [
+                        accent.withValues(alpha: 0.9),
+                        accent.withValues(alpha: 0.55),
+                      ],
+                    ),
+                  ),
+                  child: Icon(data.icon, color: Colors.white, size: 22),
+                ),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        data.title,
+                        style: TextStyle(
+                          color: context.cFg,
+                          fontSize: 15.5,
+                          fontWeight: FontWeight.w600,
+                          letterSpacing: -0.2,
+                        ),
+                      ),
+                      const SizedBox(height: 3),
+                      Text(
+                        data.subtitle,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          color: context.cMuted.withValues(alpha: 0.75),
+                          fontSize: 12.5,
+                          height: 1.3,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Icon(
+                  Icons.arrow_outward_rounded,
+                  size: 18,
+                  color: context.cMuted.withValues(alpha: 0.55),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ── Fade + slide entrance ─────────────────────────────────────────────────────
+class _FadeInSlide extends StatefulWidget {
+  const _FadeInSlide({required this.child, required this.delay});
+
+  final Widget child;
+  final int delay;
+
+  @override
+  State<_FadeInSlide> createState() => _FadeInSlideState();
+}
+
+class _FadeInSlideState extends State<_FadeInSlide>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _ctrl = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 500),
+  );
+  late final Animation<double> _fade =
+      CurvedAnimation(parent: _ctrl, curve: Curves.easeOut);
+  late final Animation<Offset> _slide = Tween<Offset>(
+    begin: const Offset(0, 0.18),
+    end: Offset.zero,
+  ).animate(CurvedAnimation(parent: _ctrl, curve: Curves.easeOutCubic));
+
+  @override
+  void initState() {
+    super.initState();
+    Future.delayed(Duration(milliseconds: widget.delay), () {
+      if (mounted) _ctrl.forward();
+    });
+  }
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return FadeTransition(
+      opacity: _fade,
+      child: SlideTransition(position: _slide, child: widget.child),
     );
   }
 }

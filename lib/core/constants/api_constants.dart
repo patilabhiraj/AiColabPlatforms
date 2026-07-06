@@ -13,8 +13,7 @@ abstract final class ApiConstants {
 
   // ── Chats ─────────────────────────────────────────────────────────────────────
   static const String chats                  = '/api/chats';           // GET list, POST create
-  static String chatById(String id)          => '/api/chats/$id';      // GET, PUT, DELETE
-  static String chatMessages(String id)      => '/api/chats/$id/messages'; // GET messages
+  static String chatById(String id)          => '/api/chats/$id';      // GET (incl. messages), PUT, DELETE
   static String chatSend(String id)          => '/api/chats/$id/send'; // POST stream response
   static String chatContexts(String id)      => '/api/chats/$id/contexts'; // GET, PUT
   static String chatArchive(String id)       => '/api/chats/$id/archive';  // PATCH toggle

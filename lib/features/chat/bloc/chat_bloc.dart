@@ -66,14 +66,19 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
   ) async {
     emit(ChatLoading());
     // Load only the first page (5 chats); the rest come via "Load More Chats".
-    final result = await _getConversations.page(page: 1, pageSize: _conversationsPageSize);
+    final result = await _getConversations.page(
+      page: 1,
+      pageSize: _conversationsPageSize,
+    );
     result.fold(
       (failure) => emit(ChatError(failure.message)),
-      (paged) => emit(ChatLoaded(
-        conversations: paged.conversations,
-        conversationsPage: paged.page,
-        hasMoreConversations: paged.hasNextPage,
-      )),
+      (paged) => emit(
+        ChatLoaded(
+          conversations: paged.conversations,
+          conversationsPage: paged.page,
+          hasMoreConversations: paged.hasNextPage,
+        ),
+      ),
     );
     // Load models + assistants in the background once the chat shell is ready.
     if (state is ChatLoaded) add(ChatLoadCatalog());
@@ -112,12 +117,14 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
           ...latest.conversations,
           ...paged.conversations.where((c) => !existingIds.contains(c.id)),
         ];
-        emit(latest.copyWith(
-          conversations: merged,
-          conversationsPage: paged.page,
-          hasMoreConversations: paged.hasNextPage,
-          isLoadingMoreConversations: false,
-        ));
+        emit(
+          latest.copyWith(
+            conversations: merged,
+            conversationsPage: paged.page,
+            hasMoreConversations: paged.hasNextPage,
+            isLoadingMoreConversations: false,
+          ),
+        );
       },
     );
   }
@@ -138,10 +145,9 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
       final selected = current.selectedModelIds.isNotEmpty
           ? current.selectedModelIds
           : _defaultSelection(models);
-      emit(current.copyWith(
-        availableModels: models,
-        selectedModelIds: selected,
-      ));
+      emit(
+        current.copyWith(availableModels: models, selectedModelIds: selected),
+      );
     });
 
     final assistantsResult = await _getAssistants();
@@ -190,8 +196,9 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
     final current = state as ChatLoaded;
     final capability = event.capability;
 
-    final validModels =
-        current.availableModels.where((m) => m.supportsCapability(capability)).toList();
+    final validModels = current.availableModels
+        .where((m) => m.supportsCapability(capability))
+        .toList();
     final compatibleSelected = current.selectedModelIds
         .where((id) => validModels.any((m) => m.id == id))
         .toList();
@@ -214,10 +221,9 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
       }
     }
 
-    emit(current.copyWith(
-      capability: capability,
-      selectedModelIds: newSelection,
-    ));
+    emit(
+      current.copyWith(capability: capability, selectedModelIds: newSelection),
+    );
   }
 
   void _onSetMultiMode(ChatSetMultiMode event, Emitter<ChatState> emit) {
@@ -228,7 +234,9 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
     if (!event.multiMode && selected.length > 1) {
       selected = [selected.first];
     }
-    emit(current.copyWith(multiMode: event.multiMode, selectedModelIds: selected));
+    emit(
+      current.copyWith(multiMode: event.multiMode, selectedModelIds: selected),
+    );
   }
 
   void _onSelectAssistant(ChatSelectAssistant event, Emitter<ChatState> emit) {
@@ -243,15 +251,17 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
       selectedModelIds = [assistant!.defaultModelId!];
     }
 
-    emit(current.copyWith(
-      selectedAssistant: assistant,
-      clearAssistant: assistant == null,
-      selectedModelIds: selectedModelIds,
-      clearConversation: true,
-      messages: const [],
-      isSending: false,
-      clearStreaming: true,
-    ));
+    emit(
+      current.copyWith(
+        selectedAssistant: assistant,
+        clearAssistant: assistant == null,
+        selectedModelIds: selectedModelIds,
+        clearConversation: true,
+        messages: const [],
+        isSending: false,
+        clearStreaming: true,
+      ),
+    );
   }
 
   Future<void> _onSelectConversation(
@@ -263,27 +273,31 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
 
     // Open the selected conversation immediately (mirrors ChatGPT): show it as
     // selected, clear any previous/streaming messages and start loading.
-    emit(current.copyWith(
-      selectedConversation: event.conversation,
-      clearAssistant: true,
-      messages: [],
-      isSending: false,
-      clearStreaming: true,
-    ));
+    emit(
+      current.copyWith(
+        selectedConversation: event.conversation,
+        clearAssistant: true,
+        messages: [],
+        isSending: false,
+        clearStreaming: true,
+      ),
+    );
 
     final result = await _getMessages(event.conversation.id);
     if (state is! ChatLoaded) return;
     result.fold(
-      (failure) => emit((state as ChatLoaded).copyWith(
-        messages: [
-          ChatMessage(
-            id: 'load_error',
-            content: 'Could not load this chat. ${failure.message}',
-            isUser: false,
-            timestamp: DateTime.now(),
-          ),
-        ],
-      )),
+      (failure) => emit(
+        (state as ChatLoaded).copyWith(
+          messages: [
+            ChatMessage(
+              id: 'load_error',
+              content: 'Could not load this chat. ${failure.message}',
+              isUser: false,
+              timestamp: DateTime.now(),
+            ),
+          ],
+        ),
+      ),
       (messages) => emit((state as ChatLoaded).copyWith(messages: messages)),
     );
   }
@@ -302,10 +316,12 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
       timestamp: DateTime.now(),
     );
 
-    emit(current.copyWith(
-      messages: [...current.messages, userMsg],
-      isSending: true,
-    ));
+    emit(
+      current.copyWith(
+        messages: [...current.messages, userMsg],
+        isSending: true,
+      ),
+    );
 
     String conversationId;
     ChatConversation? newConversation;
@@ -327,12 +343,14 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
 
       if (state is! ChatLoaded) return;
       final currentState = state as ChatLoaded;
-      emit(currentState.copyWith(
-        selectedConversation: newConversation,
-        conversations: [newConversation, ...currentState.conversations],
-        messages: currentState.messages,
-        isSending: true,
-      ));
+      emit(
+        currentState.copyWith(
+          selectedConversation: newConversation,
+          conversations: [newConversation, ...currentState.conversations],
+          messages: currentState.messages,
+          isSending: true,
+        ),
+      );
     } else {
       conversationId = current.selectedConversation!.id;
     }
@@ -343,22 +361,26 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
 
     result.fold(
       (_) => emit(updated.copyWith(isSending: false)),
-      (aiMsg) => emit(updated.copyWith(
-        messages: [...updated.messages, aiMsg],
-        isSending: false,
-      )),
+      (aiMsg) => emit(
+        updated.copyWith(
+          messages: [...updated.messages, aiMsg],
+          isSending: false,
+        ),
+      ),
     );
   }
 
   void _onStartNew(ChatStartNewConversation event, Emitter<ChatState> emit) {
     if (state is! ChatLoaded) return;
-    emit((state as ChatLoaded).copyWith(
-      clearConversation: true,
-      clearAssistant: true,
-      messages: [],
-      isSending: false,
-      clearStreaming: true,
-    ));
+    emit(
+      (state as ChatLoaded).copyWith(
+        clearConversation: true,
+        clearAssistant: true,
+        messages: [],
+        isSending: false,
+        clearStreaming: true,
+      ),
+    );
   }
 
   Future<void> _onDeleteConversation(
@@ -373,16 +395,19 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
     final updatedConversations = current.conversations
         .where((conv) => conv.id != event.conversationId)
         .toList();
-    final updatedSelection = current.selectedConversation?.id == event.conversationId
+    final updatedSelection =
+        current.selectedConversation?.id == event.conversationId
         ? null
         : current.selectedConversation;
 
-    emit(current.copyWith(
-      conversations: updatedConversations,
-      selectedConversation: updatedSelection,
-      messages: updatedSelection == null ? [] : current.messages,
-      clearStreaming: true,
-    ));
+    emit(
+      current.copyWith(
+        conversations: updatedConversations,
+        selectedConversation: updatedSelection,
+        messages: updatedSelection == null ? [] : current.messages,
+        clearStreaming: true,
+      ),
+    );
   }
 
   void _onToggleStar(ChatToggleStarMessage event, Emitter<ChatState> emit) {
@@ -397,13 +422,17 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
         .toList();
 
     final updatedStarred = wasStarred
-        ? current.starredMessages.where((m) => m.id != event.message.id).toList()
+        ? current.starredMessages
+              .where((m) => m.id != event.message.id)
+              .toList()
         : [...current.starredMessages, toggled];
 
-    emit(current.copyWith(
-      messages: updatedMessages,
-      starredMessages: updatedStarred,
-    ));
+    emit(
+      current.copyWith(
+        messages: updatedMessages,
+        starredMessages: updatedStarred,
+      ),
+    );
   }
 
   void _onToggleLike(ChatToggleLikeMessage event, Emitter<ChatState> emit) {
@@ -427,7 +456,9 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
     final current = state as ChatLoaded;
 
     // Find the AI message being regenerated
-    final aiMessageIndex = current.messages.indexWhere((m) => m.id == event.messageId);
+    final aiMessageIndex = current.messages.indexWhere(
+      (m) => m.id == event.messageId,
+    );
     if (aiMessageIndex == -1) return;
 
     // Find the user message before this AI message
@@ -446,10 +477,7 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
         .where((m) => m.id != event.messageId)
         .toList();
 
-    emit(current.copyWith(
-      messages: updatedMessages,
-      isSending: true,
-    ));
+    emit(current.copyWith(messages: updatedMessages, isSending: true));
 
     // Resend the user's message to get new response
     final streamingMessageId = 'ai_${DateTime.now().millisecondsSinceEpoch}';
@@ -460,7 +488,10 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
         return either.fold(
           (failure) {
             if (state is! ChatLoaded) return state;
-            return (state as ChatLoaded).copyWith(isSending: false, clearStreaming: true);
+            return (state as ChatLoaded).copyWith(
+              isSending: false,
+              clearStreaming: true,
+            );
           },
           (content) {
             if (state is! ChatLoaded) return state;
@@ -482,20 +513,24 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
       final suggestedQuestions = _extractSuggestedQuestions(rawContent);
       final cleanedContent = _cleanStreamedContent(rawContent);
 
-      emit(finalState.copyWith(
-        messages: [
-          ...finalState.messages,
-          ChatMessage(
-            id: streamingMessageId,
-            content: cleanedContent,
-            isUser: false,
-            timestamp: DateTime.now(),
-            suggestedQuestions: suggestedQuestions.isNotEmpty ? suggestedQuestions : null,
-          ),
-        ],
-        isSending: false,
-        clearStreaming: true,
-      ));
+      emit(
+        finalState.copyWith(
+          messages: [
+            ...finalState.messages,
+            ChatMessage(
+              id: streamingMessageId,
+              content: cleanedContent,
+              isUser: false,
+              timestamp: DateTime.now(),
+              suggestedQuestions: suggestedQuestions.isNotEmpty
+                  ? suggestedQuestions
+                  : null,
+            ),
+          ],
+          isSending: false,
+          clearStreaming: true,
+        ),
+      );
     }
   }
 
@@ -504,7 +539,11 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
     Emitter<ChatState> emit,
   ) async {
     // Fire-and-forget — no UI state change needed
-    await _repository.submitFeedback(event.chatId, event.messageId, event.isPositive);
+    await _repository.submitFeedback(
+      event.chatId,
+      event.messageId,
+      event.isPositive,
+    );
   }
 
   Future<void> _onSendMessageStreaming(
@@ -521,10 +560,12 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
       timestamp: DateTime.now(),
     );
 
-    emit(current.copyWith(
-      messages: [...current.messages, userMsg],
-      isSending: true,
-    ));
+    emit(
+      current.copyWith(
+        messages: [...current.messages, userMsg],
+        isSending: true,
+      ),
+    );
 
     String conversationId;
     ChatConversation? newConversation;
@@ -546,12 +587,14 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
 
       if (state is! ChatLoaded) return;
       final currentState = state as ChatLoaded;
-      emit(currentState.copyWith(
-        selectedConversation: newConversation,
-        conversations: [newConversation, ...currentState.conversations],
-        messages: currentState.messages,
-        isSending: true,
-      ));
+      emit(
+        currentState.copyWith(
+          selectedConversation: newConversation,
+          conversations: [newConversation, ...currentState.conversations],
+          messages: currentState.messages,
+          isSending: true,
+        ),
+      );
     } else {
       conversationId = current.selectedConversation!.id;
     }
@@ -582,7 +625,10 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
         return either.fold(
           (failure) {
             if (state is! ChatLoaded) return state;
-            return (state as ChatLoaded).copyWith(isSending: false, clearStreaming: true);
+            return (state as ChatLoaded).copyWith(
+              isSending: false,
+              clearStreaming: true,
+            );
           },
           (chunk) {
             if (state is! ChatLoaded) return state;
@@ -605,21 +651,25 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
       final cleanedContent = _cleanStreamedContent(rawContent);
       final modelName = _modelName(modelId);
 
-      emit(finalState.copyWith(
-        messages: [
-          ...finalState.messages,
-          ChatMessage(
-            id: streamingMessageId,
-            content: cleanedContent,
-            isUser: false,
-            timestamp: DateTime.now(),
-            modelName: modelName,
-            suggestedQuestions: suggestedQuestions.isNotEmpty ? suggestedQuestions : null,
-          ),
-        ],
-        isSending: false,
-        clearStreaming: true,
-      ));
+      emit(
+        finalState.copyWith(
+          messages: [
+            ...finalState.messages,
+            ChatMessage(
+              id: streamingMessageId,
+              content: cleanedContent,
+              isUser: false,
+              timestamp: DateTime.now(),
+              modelName: modelName,
+              suggestedQuestions: suggestedQuestions.isNotEmpty
+                  ? suggestedQuestions
+                  : null,
+            ),
+          ],
+          isSending: false,
+          clearStreaming: true,
+        ),
+      );
     } else {
       emit(finalState.copyWith(isSending: false, clearStreaming: true));
     }
@@ -637,7 +687,12 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
     final prep = prepResult.fold((_) => null, (r) => r);
     if (prep == null) {
       if (state is ChatLoaded) {
-        emit((state as ChatLoaded).copyWith(isSending: false, clearStreaming: true));
+        emit(
+          (state as ChatLoaded).copyWith(
+            isSending: false,
+            clearStreaming: true,
+          ),
+        );
       }
       return;
     }
@@ -648,27 +703,31 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
     // 2. Seed a single assistant message holding one slot per model.
     final messageId = 'multi_${prep.assistantMessageId}';
     final responses = modelIds
-        .map((id) => ModelResponse(
-              modelId: id,
-              modelName: _modelName(id) ?? 'AI',
-              externalId: _externalId(id),
-            ))
+        .map(
+          (id) => ModelResponse(
+            modelId: id,
+            modelName: _modelName(id) ?? 'AI',
+            externalId: _externalId(id),
+          ),
+        )
         .toList();
 
-    emit(base.copyWith(
-      messages: [
-        ...base.messages,
-        ChatMessage(
-          id: messageId,
-          content: '',
-          isUser: false,
-          timestamp: DateTime.now(),
-          modelResponses: responses,
-          activeModelId: modelIds.first,
-        ),
-      ],
-      isSending: true,
-    ));
+    emit(
+      base.copyWith(
+        messages: [
+          ...base.messages,
+          ChatMessage(
+            id: messageId,
+            content: '',
+            isUser: false,
+            timestamp: DateTime.now(),
+            modelResponses: responses,
+            activeModelId: modelIds.first,
+          ),
+        ],
+        isSending: true,
+      ),
+    );
 
     // 3. Fan out one stream per model WITHOUT awaiting here: chunks are routed
     //    back through internal events, which can only be processed once this
@@ -695,8 +754,14 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
         assistantMessageId: prep.assistantMessageId,
       )) {
         either.fold(
-          (failure) => add(ChatModelDone(messageId, modelId,
-              failed: true, errorContent: failure.message)),
+          (failure) => add(
+            ChatModelDone(
+              messageId,
+              modelId,
+              failed: true,
+              errorContent: failure.message,
+            ),
+          ),
           (chunk) => add(ChatModelChunk(messageId, modelId, chunk.content)),
         );
       }
@@ -708,15 +773,24 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
 
   void _onModelChunk(ChatModelChunk event, Emitter<ChatState> emit) {
     if (state is! ChatLoaded) return;
-    emit(_updateModelResponse(
-      state as ChatLoaded,
-      event.messageId,
-      event.modelId,
-      (mr) => mr.copyWith(
-        content: _cleanStreamedContent(event.content),
-        status: ModelResponseStatus.streaming,
+    // Parse follow-up questions out of the raw chunk (the model appends them as
+    // a trailing JSON array) and clean them from the displayed content. Doing
+    // this per chunk means the final chunk leaves the right questions in place.
+    final questions = _extractSuggestedQuestions(event.content);
+    emit(
+      _updateModelResponse(
+        state as ChatLoaded,
+        event.messageId,
+        event.modelId,
+        (mr) => mr.copyWith(
+          content: _cleanStreamedContent(event.content),
+          status: ModelResponseStatus.streaming,
+          suggestedQuestions: questions.isNotEmpty
+              ? questions
+              : mr.suggestedQuestions,
+        ),
       ),
-    ));
+    );
   }
 
   void _onModelDone(ChatModelDone event, Emitter<ChatState> emit) {
@@ -740,8 +814,9 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
       (m) => m.id == event.messageId,
       orElse: () => updated.messages.last,
     );
-    final allDone = msg.modelResponses
-        .every((mr) => mr.status != ModelResponseStatus.streaming);
+    final allDone = msg.modelResponses.every(
+      (mr) => mr.status != ModelResponseStatus.streaming,
+    );
 
     emit(updated.copyWith(isSending: !allDone));
   }
@@ -829,7 +904,10 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
 
   List<String> _extractSuggestedQuestions(String content) {
     final questions = <String>[];
-    final jsonArrayPattern = RegExp(r'\[\s*"([^"]+)"(?:\s*,\s*"([^"]+)")*\s*\]', multiLine: true);
+    final jsonArrayPattern = RegExp(
+      r'\[\s*"([^"]+)"(?:\s*,\s*"([^"]+)")*\s*\]',
+      multiLine: true,
+    );
 
     for (final match in jsonArrayPattern.allMatches(content)) {
       try {

@@ -23,12 +23,17 @@ class ModelResponse extends Equatable {
 
   final ModelResponseStatus status;
 
+  /// Follow-up questions for this specific model's answer, parsed out of the
+  /// trailing JSON array the model emits. Empty when there are none.
+  final List<String> suggestedQuestions;
+
   const ModelResponse({
     required this.modelId,
     required this.modelName,
     this.externalId = '',
     this.content = '',
     this.status = ModelResponseStatus.streaming,
+    this.suggestedQuestions = const [],
   });
 
   ModelResponse copyWith({
@@ -37,6 +42,7 @@ class ModelResponse extends Equatable {
     String? externalId,
     String? content,
     ModelResponseStatus? status,
+    List<String>? suggestedQuestions,
   }) {
     return ModelResponse(
       modelId: modelId ?? this.modelId,
@@ -44,9 +50,17 @@ class ModelResponse extends Equatable {
       externalId: externalId ?? this.externalId,
       content: content ?? this.content,
       status: status ?? this.status,
+      suggestedQuestions: suggestedQuestions ?? this.suggestedQuestions,
     );
   }
 
   @override
-  List<Object?> get props => [modelId, modelName, externalId, content, status];
+  List<Object?> get props => [
+    modelId,
+    modelName,
+    externalId,
+    content,
+    status,
+    suggestedQuestions,
+  ];
 }

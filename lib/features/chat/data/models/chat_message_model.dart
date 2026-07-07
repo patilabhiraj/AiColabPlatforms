@@ -34,11 +34,14 @@ class ChatMessageModel extends ChatMessage {
 
     // Backend roles are uppercase ("USER" / "ASSISTANT"); compare loosely so
     // history messages don't all collapse into one side.
-    final role = (json['role'] ?? json['sender'] ?? '').toString().toUpperCase();
+    final role = (json['role'] ?? json['sender'] ?? '')
+        .toString()
+        .toUpperCase();
     final isUser = role == 'USER' || role == 'HUMAN';
 
     final timestamp =
-        DateTime.tryParse(json['createdAt']?.toString() ?? '') ?? DateTime.now();
+        DateTime.tryParse(json['createdAt']?.toString() ?? '') ??
+        DateTime.now();
 
     // Parse per-model responses (present on assistant messages).
     final rawResponses = json['modelResponses'];
@@ -81,20 +84,27 @@ class ChatMessageModel extends ChatMessage {
         content: parsed.cleanText,
         isUser: false,
         timestamp: timestamp,
-        modelName: only?.modelName ??
+        modelName:
+            only?.modelName ??
             (json['model'] as String?) ??
             (json['modelName'] as String?),
         isLiked: only != null ? _likedForResponse(rawResponses, 0) : null,
         isStarred: only != null && _starredForResponse(rawResponses, 0),
         suggestedQuestions:
-            explicitQuestions ?? (parsed.questions.isNotEmpty ? parsed.questions : null),
+            explicitQuestions ??
+            (parsed.questions.isNotEmpty ? parsed.questions : null),
       );
     }
 
-    // Multi-model: strip follow-up arrays from each response's content too.
-    final cleaned = responses
-        .map((r) => r.copyWith(content: _parseFollowUpQuestions(r.content).cleanText))
-        .toList();
+    // Multi-model: strip follow-up arrays from each response's content and keep
+    // the parsed questions on the response so each card can show its own.
+    final cleaned = responses.map((r) {
+      final parsed = _parseFollowUpQuestions(r.content);
+      return r.copyWith(
+        content: parsed.cleanText,
+        suggestedQuestions: parsed.questions,
+      );
+    }).toList();
     return ChatMessageModel(
       id: id,
       content: '',
@@ -131,14 +141,11 @@ class ChatMessageModel extends ChatMessage {
         try {
           final decoded = jsonDecode(jsonContent);
           if (decoded is List) {
-            final questions = decoded
-                .whereType<String>()
-                .take(4)
-                .toList();
+            final questions = decoded.whereType<String>().take(4).toList();
             if (questions.isNotEmpty) {
-              final clean = (text.substring(0, last.start) +
-                      text.substring(last.end))
-                  .replaceAll(RegExp(r'[\s`\-]+$'), '');
+              final clean =
+                  (text.substring(0, last.start) + text.substring(last.end))
+                      .replaceAll(RegExp(r'[\s`\-]+$'), '');
               return (cleanText: clean, questions: questions);
             }
           }

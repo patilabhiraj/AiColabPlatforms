@@ -39,7 +39,10 @@ class App extends StatelessWidget {
               debugShowCheckedModeBanner: false,
 
               // ── Themes ──────────────────────────────────────────────────────────
-              theme: AppTheme.dark,// light
+              // `theme` is what ThemeMode.light resolves to — it must be the
+              // light theme, otherwise the toggle switches modes but the UI
+              // stays dark.
+              theme: AppTheme.light,
               darkTheme: AppTheme.dark,
               themeMode: sl<ThemeController>().mode,
               // ── GoRouter Config ─────────────────────────────────────────────────

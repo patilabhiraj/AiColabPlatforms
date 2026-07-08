@@ -281,57 +281,86 @@ class _MultiModelCards extends StatefulWidget {
 }
 
 class _MultiModelCardsState extends State<_MultiModelCards> {
+  final _topKey = GlobalKey();
+
   List<ModelResponse> get _responses => widget.message.modelResponses;
+
+  int get _activeIndex {
+    if (_responses.isEmpty) return 0;
+    final i = _responses.indexWhere(
+      (r) => r.modelId == widget.message.activeModelId,
+    );
+    return i < 0 ? 0 : i;
+  }
+
+  @override
+  void didUpdateWidget(_MultiModelCards old) {
+    super.didUpdateWidget(old);
+    // When the active model changes (swipe or pill tap), the new card can be
+    // a very different height than the old one, and the surrounding chat
+    // ListView keeps whatever scroll offset it already had — landing the user
+    // somewhere in the middle (often near the bottom) of the new answer
+    // instead of its start. Scroll this message's top back into view so every
+    // model switch reliably starts the reader at the top of the new answer.
+    if (old.message.activeModelId != widget.message.activeModelId) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        final ctx = _topKey.currentContext;
+        if (ctx == null || !mounted) return;
+        Scrollable.ensureVisible(
+          ctx,
+          duration: const Duration(milliseconds: 220),
+          curve: Curves.easeOut,
+          alignment: 0,
+        );
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
-    // Each card takes its own natural height — a short answer stays a short
-    // card, so there's no wasted empty space. The row scrolls horizontally to
-    // compare models. Cards are aligned to the top so their headers line up.
+    final index = _activeIndex;
+    final active = _responses.isEmpty ? null : _responses[index];
+
     return Column(
+      key: _topKey,
       crossAxisAlignment: CrossAxisAlignment.start,
       mainAxisSize: MainAxisSize.min,
       children: [
-        // Page-indicator pill strip (also tappable → scrolls that card in).
+        // Page-indicator pill strip (also tappable → switches the shown card).
         _ModelPills(
           responses: _responses,
           activeModelId: widget.message.activeModelId,
-          onTap: _scrollToModel,
+          onTap: _selectModel,
         ),
         const SizedBox(height: 8),
 
-        // Horizontally scrolling comparison row. A lazy [ListView.builder]
-        // renders only the visible cards — critical here, since a message can
-        // hold many models (9+) and each card contains a MarkdownBody. Eagerly
-        // building all of them (a Row inside a scroll view) blocks the main
-        // thread long enough to ANR. Each card gets a fixed width and a bounded
-        // height (its content scrolls if longer), which keeps the list lazy and
-        // the layout cheap.
-        SizedBox(
-          height: (MediaQuery.sizeOf(context).height * 0.42).clamp(
-            240.0,
-            460.0,
-          ),
-          child: ListView.builder(
-            controller: _scrollCtrl,
-            scrollDirection: Axis.horizontal,
-            padding: const EdgeInsets.symmetric(horizontal: 2),
-            itemCount: _responses.length,
-            itemBuilder: (context, i) => Padding(
-              padding: EdgeInsets.only(
-                right: i == _responses.length - 1 ? 0 : 10,
-              ),
-              child: SizedBox(
-                width: MediaQuery.sizeOf(context).width * 0.8,
-                child: _ModelCard(
-                  response: _responses[i],
-                  messageId: widget.message.id,
-                  chatId: widget.chatId,
-                ),
-              ),
+        // Only the active model's card is ever built — never all of them —
+        // so a message with many models (9+) stays cheap no matter how many
+        // there are; that eager-building is what caused an ANR in earlier
+        // Row/ListView/PageView attempts. The card takes its own natural
+        // height (no inner scroll, no fixed height), so the *chat list*
+        // scrolls it like any other message — matching how ChatGPT etc. show
+        // a full response inline instead of trapping it in a scrollable box.
+        // A horizontal swipe here switches to the next/previous model; a
+        // vertical drag is left alone so it reaches the chat list untouched.
+        if (active != null)
+          GestureDetector(
+            key: ValueKey(active.modelId),
+            behavior: HitTestBehavior.translucent,
+            onHorizontalDragEnd: (details) {
+              final v = details.primaryVelocity ?? 0;
+              if (v < -200) {
+                _selectByOffset(index, 1);
+              } else if (v > 200) {
+                _selectByOffset(index, -1);
+              }
+            },
+            child: _ModelCard(
+              response: active,
+              messageId: widget.message.id,
+              chatId: widget.chatId,
             ),
           ),
-        ),
 
         // Swipe hint (only when more than one card).
         if (_responses.length > 1)
@@ -348,85 +377,20 @@ class _MultiModelCardsState extends State<_MultiModelCards> {
               ),
             ),
           ),
-
-        // Follow-up questions for the *active* model, shown below the whole
-        // carousel so they're always visible instead of hidden under a card's
-        // inner scroll. They swap as the user swipes to a different model.
-        Builder(
-          builder: (context) {
-            final active = _activeResponse;
-            if (active == null || active.suggestedQuestions.isEmpty) {
-              return const SizedBox.shrink();
-            }
-            return _ModelSuggestedQuestions(
-              key: ValueKey(active.modelId),
-              questions: active.suggestedQuestions,
-              color: CatalogVisuals.modelColor(active.externalId),
-            );
-          },
-        ),
       ],
     );
   }
 
-  /// The response for the model currently shown/active (falls back to first).
-  ModelResponse? get _activeResponse {
-    if (_responses.isEmpty) return null;
-    final i = _responses.indexWhere(
-      (r) => r.modelId == widget.message.activeModelId,
-    );
-    return i < 0 ? _responses.first : _responses[i];
+  void _selectByOffset(int currentIndex, int delta) {
+    final next = (currentIndex + delta).clamp(0, _responses.length - 1);
+    if (next == currentIndex) return;
+    _selectModel(_responses[next].modelId);
   }
 
-  final _scrollCtrl = ScrollController();
-
-  @override
-  void initState() {
-    super.initState();
-    // Keep the bloc's activeModelId in sync while the user swipes the row.
-    // This drives both the pill highlight and the questions section below the
-    // carousel — without it they'd stay stuck on the first model. (The old
-    // PageView had onPageChanged for this; a ListView needs a listener.)
-    _scrollCtrl.addListener(_syncActiveWithScroll);
-  }
-
-  @override
-  void dispose() {
-    _scrollCtrl.removeListener(_syncActiveWithScroll);
-    _scrollCtrl.dispose();
-    super.dispose();
-  }
-
-  /// Width one card occupies in the row (card + trailing gap).
-  double get _cardExtent => MediaQuery.sizeOf(context).width * 0.80 + 10;
-
-  /// Marks the card nearest the viewport start as the active model.
-  void _syncActiveWithScroll() {
-    if (!_scrollCtrl.hasClients || _responses.isEmpty) return;
-    final index = (_scrollCtrl.offset / _cardExtent).round().clamp(
-      0,
-      _responses.length - 1,
-    );
-    final modelId = _responses[index].modelId;
-    if (modelId != widget.message.activeModelId) {
-      context.read<ChatBloc>().add(
-        ChatSelectModelTab(widget.message.id, modelId),
-      );
-    }
-  }
-
-  /// Scrolls the tapped model's card roughly into view and marks it active.
-  void _scrollToModel(int modelId) {
-    final index = _responses.indexWhere((r) => r.modelId == modelId);
-    if (index < 0) return;
+  void _selectModel(int modelId) {
+    if (modelId == widget.message.activeModelId) return;
     context.read<ChatBloc>().add(
       ChatSelectModelTab(widget.message.id, modelId),
-    );
-
-    _scrollCtrl.animateTo(
-      (_cardExtent * index).clamp(0.0, _scrollCtrl.position.maxScrollExtent),
-      duration: const Duration(milliseconds: 300),
-      curve: Curves.easeOutCubic,
     );
   }
 }
@@ -475,213 +439,183 @@ class _ModelCardState extends State<_ModelCard> {
       ),
       child: ClipRRect(
         borderRadius: BorderRadius.circular(16),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            // Thin colour accent down the left edge — subtle model identity.
-            Container(width: 3, color: color.withValues(alpha: 0.7)),
-            Expanded(
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(15, 14, 15, 12),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    // ── Header: avatar + name + status ───────────────────────────────
-                    Row(
-                      children: [
-                        Container(
-                          width: 34,
-                          height: 34,
-                          decoration: BoxDecoration(
-                            color: color.withValues(alpha: 0.18),
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                          child: Icon(
-                            CatalogVisuals.modelIcon(response.externalId),
-                            size: 19,
-                            color: color,
-                          ),
-                        ),
-                        const SizedBox(width: 10),
-                        Expanded(
-                          child: Text(
-                            response.modelName,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: TextStyle(
-                              color: fg,
-                              fontSize: 15.5,
-                              fontWeight: FontWeight.w700,
-                              letterSpacing: -0.2,
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        _StatusDot(status: response.status, color: color),
-                      ],
-                    ),
-                    const SizedBox(height: 14),
-
-                    // ── Content — fills the remaining card height and scrolls
-                    //    if the answer is longer. [Expanded] inside the fixed-
-                    //    height card keeps every card the same size and pushes
-                    //    the footer to the bottom.
-                    Expanded(
-                      child: response.content.isEmpty && streaming
-                          ? Row(children: [_BlinkingCursor()])
-                          : SingleChildScrollView(
-                              child: MarkdownBody(
-                                data: response.content,
-                                selectable: !streaming,
-                                styleSheet: MarkdownStyleSheet(
-                                  p: TextStyle(
-                                    color: failed ? context.cError : fg,
-                                    fontSize: 14.5,
-                                    height: 1.55,
-                                    letterSpacing: 0.1,
-                                  ),
-                                  strong: TextStyle(
-                                    color: fg,
-                                    fontSize: 14.5,
-                                    fontWeight: FontWeight.bold,
-                                    height: 1.55,
-                                  ),
-                                  code: TextStyle(
-                                    backgroundColor: context.cCard.withValues(
-                                      alpha: 0.5,
-                                    ),
-                                    color: color,
-                                    fontSize: 13.5,
-                                  ),
-                                  codeblockDecoration: BoxDecoration(
-                                    color: context.cCard.withValues(
-                                      alpha: context.isDark ? 0.3 : 0.8,
-                                    ),
-                                    borderRadius: BorderRadius.circular(8),
-                                  ),
-                                ),
-                              ),
-                            ),
-                    ),
-
-                    // ── Footer: full action row + "Use this" (hidden while
-                    //    streaming). The actions scroll horizontally so they
-                    //    never overflow the card, and "Use this" stays pinned.
-                    if (!streaming) ...[
-                      const SizedBox(height: 12),
+        // IntrinsicHeight lets the accent-bar Row stretch to match the
+        // content column's natural height without needing a bounded height
+        // from its parent (there isn't one now that the card sizes itself).
+        child: IntrinsicHeight(
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              // Thin colour accent down the left edge — subtle model identity.
+              Container(width: 3, color: color.withValues(alpha: 0.7)),
+              Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(15, 14, 15, 12),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // ── Header: avatar + name + status ──────────────────────
                       Row(
                         children: [
+                          Container(
+                            width: 34,
+                            height: 34,
+                            decoration: BoxDecoration(
+                              color: color.withValues(alpha: 0.18),
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: Center(
+                              child: CatalogVisuals.modelAvatar(
+                                response.externalId,
+                                size: 19,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 10),
                           Expanded(
-                            child: SingleChildScrollView(
-                              scrollDirection: Axis.horizontal,
-                              child: Row(
-                                children: [
-                                  _ActionButton(
-                                    icon: Icons.copy_rounded,
-                                    color: context.cMuted,
-                                    card: context.cCard,
-                                    onTap: () =>
-                                        _copy(context, response.content),
-                                  ),
-                                  const SizedBox(width: 6),
-                                  _ActionButton(
-                                    icon: _isStarred
-                                        ? Icons.star_rounded
-                                        : Icons.star_outline_rounded,
-                                    color: context.cMuted,
-                                    card: context.cCard,
-                                    isActive: _isStarred,
-                                    activeColor: Colors.amber,
-                                    onTap: () {
-                                      setState(() => _isStarred = !_isStarred);
-                                      context.read<ChatBloc>().add(
-                                        ChatToggleStarMessage(
-                                          _messageForActions(),
-                                        ),
-                                      );
-                                    },
-                                  ),
-                                  const SizedBox(width: 6),
-                                  _ActionButton(
-                                    icon: Icons.thumb_up_outlined,
-                                    color: context.cMuted,
-                                    card: context.cCard,
-                                    isActive: _isLiked == true,
-                                    activeColor: Colors.green,
-                                    onTap: () => _toggleFeedback(context, true),
-                                  ),
-                                  const SizedBox(width: 6),
-                                  _ActionButton(
-                                    icon: Icons.thumb_down_outlined,
-                                    color: context.cMuted,
-                                    card: context.cCard,
-                                    isActive: _isLiked == false,
-                                    activeColor: Colors.red,
-                                    onTap: () =>
-                                        _toggleFeedback(context, false),
-                                  ),
-                                  const SizedBox(width: 6),
-                                  _ActionButton(
-                                    icon: Icons.ios_share_rounded,
-                                    color: context.cMuted,
-                                    card: context.cCard,
-                                    onTap: () =>
-                                        _copy(context, response.content),
-                                  ),
-                                  const SizedBox(width: 6),
-                                  _ActionButton(
-                                    icon: Icons.refresh_rounded,
-                                    color: context.cMuted,
-                                    card: context.cCard,
-                                    onTap: chatId != null
-                                        ? () => context.read<ChatBloc>().add(
-                                            ChatRegenerateMessage(
-                                              chatId!,
-                                              messageId,
-                                            ),
-                                          )
-                                        : () {},
-                                  ),
-                                ],
+                            child: Text(
+                              response.modelName,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                color: fg,
+                                fontSize: 15.5,
+                                fontWeight: FontWeight.w700,
+                                letterSpacing: -0.2,
                               ),
                             ),
                           ),
                           const SizedBox(width: 8),
-                          // "Use this" promotes this model to the sole selection
-                          // so the next message is single-model with this pick.
-                          GestureDetector(
-                            onTap: () => context.read<ChatBloc>().add(
-                              ChatToggleModel(response.modelId),
-                            ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Text(
-                                  'Use this',
-                                  style: TextStyle(
-                                    color: color,
-                                    fontSize: 13.5,
-                                    fontWeight: FontWeight.w700,
-                                  ),
-                                ),
-                                const SizedBox(width: 3),
-                                Icon(
-                                  Icons.arrow_forward_rounded,
-                                  size: 15,
-                                  color: color,
-                                ),
-                              ],
-                            ),
-                          ),
+                          _StatusDot(status: response.status, color: color),
                         ],
                       ),
+                      const SizedBox(height: 14),
+
+                      // ── Content — natural height, no inner scroll. The card
+                      //    grows to fit the whole answer, and the surrounding
+                      //    chat list (a ListView) is what scrolls — exactly like
+                      //    a normal single-model bubble, so a long response
+                      //    reads inline instead of being trapped in a box.
+                      response.content.isEmpty && streaming
+                          ? Row(children: [_BlinkingCursor()])
+                          : MarkdownBody(
+                              data: response.content,
+                              selectable: !streaming,
+                              styleSheet: MarkdownStyleSheet(
+                                p: TextStyle(
+                                  color: failed ? context.cError : fg,
+                                  fontSize: 14.5,
+                                  height: 1.55,
+                                  letterSpacing: 0.1,
+                                ),
+                                strong: TextStyle(
+                                  color: fg,
+                                  fontSize: 14.5,
+                                  fontWeight: FontWeight.bold,
+                                  height: 1.55,
+                                ),
+                                code: TextStyle(
+                                  backgroundColor: context.cCard.withValues(
+                                    alpha: 0.5,
+                                  ),
+                                  color: color,
+                                  fontSize: 13.5,
+                                ),
+                                codeblockDecoration: BoxDecoration(
+                                  color: context.cCard.withValues(
+                                    alpha: context.isDark ? 0.3 : 0.8,
+                                  ),
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                              ),
+                            ),
+                      if (!streaming && response.suggestedQuestions.isNotEmpty)
+                        _ModelSuggestedQuestions(
+                          questions: response.suggestedQuestions,
+                          color: color,
+                        ),
+
+                      // ── Footer: full action row + "Use this" (hidden while
+                      //    streaming). The actions scroll horizontally so they
+                      //    never overflow the card.
+                      if (!streaming) ...[
+                        const SizedBox(height: 12),
+                        SingleChildScrollView(
+                          scrollDirection: Axis.horizontal,
+                          physics: const ClampingScrollPhysics(),
+                          child: Row(
+                            children: [
+                              _ActionButton(
+                                icon: Icons.copy_rounded,
+                                color: context.cMuted,
+                                card: context.cCard,
+                                onTap: () => _copy(context, response.content),
+                              ),
+                              const SizedBox(width: 6),
+                              _ActionButton(
+                                icon: _isStarred
+                                    ? Icons.star_rounded
+                                    : Icons.star_outline_rounded,
+                                color: context.cMuted,
+                                card: context.cCard,
+                                isActive: _isStarred,
+                                activeColor: Colors.amber,
+                                onTap: () {
+                                  setState(() => _isStarred = !_isStarred);
+                                  context.read<ChatBloc>().add(
+                                    ChatToggleStarMessage(_messageForActions()),
+                                  );
+                                },
+                              ),
+                              const SizedBox(width: 6),
+                              _ActionButton(
+                                icon: Icons.thumb_up_outlined,
+                                color: context.cMuted,
+                                card: context.cCard,
+                                isActive: _isLiked == true,
+                                activeColor: Colors.green,
+                                onTap: () => _toggleFeedback(context, true),
+                              ),
+                              const SizedBox(width: 6),
+                              _ActionButton(
+                                icon: Icons.thumb_down_outlined,
+                                color: context.cMuted,
+                                card: context.cCard,
+                                isActive: _isLiked == false,
+                                activeColor: Colors.red,
+                                onTap: () => _toggleFeedback(context, false),
+                              ),
+                              const SizedBox(width: 6),
+                              _ActionButton(
+                                icon: Icons.ios_share_rounded,
+                                color: context.cMuted,
+                                card: context.cCard,
+                                onTap: () => _copy(context, response.content),
+                              ),
+                              const SizedBox(width: 6),
+                              _ActionButton(
+                                icon: Icons.refresh_rounded,
+                                color: context.cMuted,
+                                card: context.cCard,
+                                onTap: chatId != null
+                                    ? () => context.read<ChatBloc>().add(
+                                        ChatRegenerateMessage(
+                                          chatId!,
+                                          messageId,
+                                        ),
+                                      )
+                                    : () {},
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
                     ],
-                  ],
+                  ),
                 ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
@@ -716,9 +650,8 @@ class _ModelCardState extends State<_ModelCard> {
 }
 
 // ── Per-model suggested follow-up questions (inside a model card) ─────────────
-class _ModelSuggestedQuestions extends StatelessWidget {
+class _ModelSuggestedQuestions extends StatefulWidget {
   const _ModelSuggestedQuestions({
-    super.key,
     required this.questions,
     required this.color,
   });
@@ -727,99 +660,125 @@ class _ModelSuggestedQuestions extends StatelessWidget {
   final Color color;
 
   @override
+  State<_ModelSuggestedQuestions> createState() =>
+      _ModelSuggestedQuestionsState();
+}
+
+class _ModelSuggestedQuestionsState extends State<_ModelSuggestedQuestions> {
+  // Guards against a fast double-tap (or tapping two different questions in
+  // quick succession) sending more than one message: the whole section locks
+  // as soon as the first tap fires.
+  bool _sent = false;
+
+  List<String> get questions => widget.questions;
+  Color get color => widget.color;
+
+  void _send(String question) {
+    if (_sent) return;
+    setState(() => _sent = true);
+    context.read<ChatBloc>().add(ChatSendMessageStreaming(question));
+  }
+
+  @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(top: 16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Subtle divider so the questions read as a distinct section below
-          // the answer rather than running into it.
-          Divider(
-            height: 1,
-            thickness: 1,
-            color: context.cBorder.withValues(alpha: 0.4),
-          ),
-          const SizedBox(height: 14),
-          Row(
-            children: [
-              Icon(
-                Icons.auto_awesome_rounded,
-                size: 13,
-                color: color.withValues(alpha: 0.9),
-              ),
-              const SizedBox(width: 6),
-              Text(
-                'Suggested follow-ups',
-                style: TextStyle(
-                  color: context.cMuted.withValues(alpha: 0.85),
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600,
-                  letterSpacing: 0.1,
+    return AnimatedOpacity(
+      // Dims the whole section once a question has been sent, as a visual
+      // confirmation that the tap registered (and that it's now inert).
+      opacity: _sent ? 0.4 : 1,
+      duration: const Duration(milliseconds: 150),
+      child: Padding(
+        padding: const EdgeInsets.only(top: 16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Subtle divider so the questions read as a distinct section below
+            // the answer rather than running into it.
+            Divider(
+              height: 1,
+              thickness: 1,
+              color: context.cBorder.withValues(alpha: 0.4),
+            ),
+            const SizedBox(height: 14),
+            Row(
+              children: [
+                Icon(
+                  Icons.auto_awesome_rounded,
+                  size: 13,
+                  color: color.withValues(alpha: 0.9),
                 ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 10),
-          for (var i = 0; i < questions.length; i++)
-            Padding(
-              padding: EdgeInsets.only(
-                bottom: i == questions.length - 1 ? 0 : 8,
-              ),
-              child: Material(
-                color: Colors.transparent,
-                child: InkWell(
-                  onTap: () => context.read<ChatBloc>().add(
-                    ChatSendMessageStreaming(questions[i]),
+                const SizedBox(width: 6),
+                Text(
+                  'Suggested follow-ups',
+                  style: TextStyle(
+                    color: context.cMuted.withValues(alpha: 0.85),
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    letterSpacing: 0.1,
                   ),
-                  borderRadius: BorderRadius.circular(12),
-                  child: Ink(
-                    decoration: BoxDecoration(
-                      color: color.withValues(alpha: 0.07),
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: color.withValues(alpha: 0.28)),
-                    ),
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 14,
-                        vertical: 12,
+                ),
+              ],
+            ),
+            const SizedBox(height: 10),
+            for (var i = 0; i < questions.length; i++)
+              Padding(
+                padding: EdgeInsets.only(
+                  bottom: i == questions.length - 1 ? 0 : 8,
+                ),
+                child: Material(
+                  color: Colors.transparent,
+                  child: InkWell(
+                    onTap: _sent ? null : () => _send(questions[i]),
+                    borderRadius: BorderRadius.circular(12),
+                    child: Ink(
+                      decoration: BoxDecoration(
+                        color: color.withValues(alpha: 0.07),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                          color: color.withValues(alpha: 0.28),
+                        ),
                       ),
-                      child: Row(
-                        crossAxisAlignment: CrossAxisAlignment.center,
-                        children: [
-                          Expanded(
-                            child: Text(
-                              questions[i],
-                              style: TextStyle(
-                                color: context.cFg.withValues(alpha: 0.92),
-                                fontSize: 13.5,
-                                height: 1.35,
-                                fontWeight: FontWeight.w500,
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 14,
+                          vertical: 12,
+                        ),
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.center,
+                          children: [
+                            Expanded(
+                              child: Text(
+                                questions[i],
+                                style: TextStyle(
+                                  color: context.cFg.withValues(alpha: 0.92),
+                                  fontSize: 13.5,
+                                  height: 1.35,
+                                  fontWeight: FontWeight.w500,
+                                ),
                               ),
                             ),
-                          ),
-                          const SizedBox(width: 10),
-                          Container(
-                            width: 26,
-                            height: 26,
-                            decoration: BoxDecoration(
-                              color: color.withValues(alpha: 0.15),
-                              shape: BoxShape.circle,
+                            const SizedBox(width: 10),
+                            Container(
+                              width: 26,
+                              height: 26,
+                              decoration: BoxDecoration(
+                                color: color.withValues(alpha: 0.15),
+                                shape: BoxShape.circle,
+                              ),
+                              child: Icon(
+                                Icons.arrow_forward_rounded,
+                                size: 15,
+                                color: color,
+                              ),
                             ),
-                            child: Icon(
-                              Icons.arrow_forward_rounded,
-                              size: 15,
-                              color: color,
-                            ),
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
                     ),
                   ),
                 ),
               ),
-            ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -843,6 +802,7 @@ class _ModelPills extends StatelessWidget {
       height: 32,
       child: ListView.separated(
         scrollDirection: Axis.horizontal,
+        physics: const ClampingScrollPhysics(),
         padding: const EdgeInsets.only(left: 2),
         itemCount: responses.length,
         separatorBuilder: (_, _) => const SizedBox(width: 6),
@@ -869,11 +829,7 @@ class _ModelPills extends StatelessWidget {
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Icon(
-                    CatalogVisuals.modelIcon(mr.externalId),
-                    size: 13,
-                    color: color,
-                  ),
+                  CatalogVisuals.modelAvatar(mr.externalId, size: 13),
                   const SizedBox(width: 5),
                   Text(
                     mr.modelName,

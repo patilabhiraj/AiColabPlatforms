@@ -49,9 +49,10 @@ class _ChatInputBarState extends State<ChatInputBar>
       vsync: this,
       duration: const Duration(milliseconds: 200),
     );
-    _scaleAnim = Tween<double>(begin: 1.0, end: 0.95).animate(
-      CurvedAnimation(parent: _animCtrl, curve: Curves.easeInOut),
-    );
+    _scaleAnim = Tween<double>(
+      begin: 1.0,
+      end: 0.95,
+    ).animate(CurvedAnimation(parent: _animCtrl, curve: Curves.easeInOut));
   }
 
   @override
@@ -92,8 +93,7 @@ class _ChatInputBarState extends State<ChatInputBar>
       (enhanced) {
         _ctrl.text = enhanced;
         // Keep the caret at the end so the user can keep typing naturally.
-        _ctrl.selection =
-            TextSelection.collapsed(offset: _ctrl.text.length);
+        _ctrl.selection = TextSelection.collapsed(offset: _ctrl.text.length);
       },
     );
 
@@ -107,10 +107,8 @@ class _ChatInputBarState extends State<ChatInputBar>
       context: context,
       backgroundColor: Colors.transparent,
       isScrollControlled: true,
-      builder: (_) => BlocProvider.value(
-        value: bloc,
-        child: const _ComposerMenu(),
-      ),
+      builder: (_) =>
+          BlocProvider.value(value: bloc, child: const _ComposerMenu()),
     );
   }
 
@@ -120,8 +118,12 @@ class _ChatInputBarState extends State<ChatInputBar>
 
     return Container(
       decoration: BoxDecoration(color: context.cBg),
-      padding:
-          EdgeInsets.fromLTRB(16, 12, 16, bottomPad > 0 ? bottomPad + 8 : 16),
+      padding: EdgeInsets.fromLTRB(
+        16,
+        12,
+        16,
+        bottomPad > 0 ? bottomPad + 8 : 16,
+      ),
       child: Container(
         decoration: BoxDecoration(
           color: context.cCard.withValues(alpha: 0.4),
@@ -151,7 +153,9 @@ class _ChatInputBarState extends State<ChatInputBar>
                 textInputAction: TextInputAction.newline,
                 style: TextStyle(color: context.cFg, fontSize: 15, height: 1.4),
                 decoration: InputDecoration(
-                  hintText: widget.enabled ? 'Ask anything...' : 'AI is thinking…',
+                  hintText: widget.enabled
+                      ? 'Ask me anything...'
+                      : 'AI is thinking…',
                   hintStyle: TextStyle(
                     color: context.cMuted.withValues(alpha: 0.6),
                     fontSize: 15,
@@ -181,8 +185,15 @@ class _ChatInputBarState extends State<ChatInputBar>
 
                   // Single / Multi toggle
                   const _ModeToggle(),
+                  const SizedBox(width: 8),
 
-                 const Spacer(),
+                  // Stacked avatars of the selected models (multi mode) —
+                  // tap to open the model picker.
+                  _SelectedModelsBadge(
+                    onTap: widget.enabled ? _openComposerMenu : null,
+                  ),
+
+                  const Spacer(),
                   // Enhance prompt — only shown once the user has typed a draft.
                   if (_hasText) ...[
                     _EnhanceButton(
@@ -197,7 +208,7 @@ class _ChatInputBarState extends State<ChatInputBar>
                       icon: Icons.graphic_eq_rounded,
                       onTap: widget.enabled ? () {} : null,
                     )
-                  else 
+                  else
                     ScaleTransition(
                       scale: _scaleAnim,
                       child: GestureDetector(
@@ -227,7 +238,8 @@ class _ChatInputBarState extends State<ChatInputBar>
   }
 }
 
-// ── Capability pill + selected model chips ────────────────────────────────────
+// ── Capability pill (selected models now show as stacked avatars in the bottom
+//    row — see _SelectedModelsBadge) ───────────────────────────────────────────
 class _SelectionPreview extends StatelessWidget {
   const _SelectionPreview();
 
@@ -236,78 +248,125 @@ class _SelectionPreview extends StatelessWidget {
     return BlocBuilder<ChatBloc, ChatState>(
       buildWhen: (a, b) => b is ChatLoaded,
       builder: (context, state) {
-        if (state is! ChatLoaded) return const SizedBox.shrink();
-
-        final accent = AppColors.landingPrimary;
-        final chips = <Widget>[];
-
-        // Capability pill (when not standard)
-        if (state.capability != 'STANDARD') {
-          chips.add(_Pill(
-            icon: CatalogVisuals.capabilityIcon(state.capability),
-            label: CatalogVisuals.capabilityLabel(state.capability),
-            color: accent,
-            onClose: () =>
-                context.read<ChatBloc>().add(ChatSetCapability('STANDARD')),
-          ));
+        if (state is! ChatLoaded || state.capability == 'STANDARD') {
+          return const SizedBox.shrink();
         }
-
-        // Selected model chips (only meaningful in multi mode)
-        if (state.multiMode && state.selectedModelIds.length > 1) {
-          for (final id in state.selectedModelIds) {
-            // NB: `availableModels` may hold `AiModelModel` (a subtype) at
-            // runtime, so `firstWhere(orElse: …)` reifies the orElse return
-            // type as that subtype and throws if we return a plain `AiModel`.
-            // A nullable lookup avoids that covariance trap entirely.
-            AiModel? found;
-            for (final m in state.availableModels) {
-              if (m.id == id) {
-                found = m;
-                break;
-              }
-            }
-            if (found == null) continue;
-            final model = found;
-            chips.add(_Pill(
-              icon: CatalogVisuals.modelIcon(model.externalId),
-              iconColor: CatalogVisuals.modelColor(model.externalId),
-              label: model.name,
-              color: accent,
-              onClose: () =>
-                  context.read<ChatBloc>().add(ChatToggleModel(model.id)),
-            ));
-          }
-        }
-
-        if (chips.isEmpty) return const SizedBox.shrink();
-
-        // A single horizontally-scrolling row keeps the composer height fixed
-        // no matter how many models are selected — the chips scroll sideways
-        // instead of wrapping into taller and taller rows.
         return Padding(
-          padding: const EdgeInsets.fromLTRB(12, 12, 12, 0),
-          child: SizedBox(
-            height: 34,
-            child: ShaderMask(
-              // Fade the right edge so it's obvious more chips lie off-screen.
-              shaderCallback: (rect) => LinearGradient(
-                begin: Alignment.centerLeft,
-                end: Alignment.centerRight,
-                colors: const [Colors.white, Colors.white, Colors.transparent],
-                stops: const [0.0, 0.92, 1.0],
-              ).createShader(rect),
-              blendMode: BlendMode.dstIn,
-              child: ListView.separated(
-                scrollDirection: Axis.horizontal,
-                padding: const EdgeInsets.symmetric(horizontal: 4),
-                itemCount: chips.length,
-                separatorBuilder: (_, _) => const SizedBox(width: 6),
-                itemBuilder: (_, i) => Center(child: chips[i]),
-              ),
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+          child: Align(
+            alignment: Alignment.centerLeft,
+            child: _Pill(
+              icon: CatalogVisuals.capabilityIcon(state.capability),
+              label: CatalogVisuals.capabilityLabel(state.capability),
+              color: AppColors.landingPrimary,
+              onClose: () =>
+                  context.read<ChatBloc>().add(ChatSetCapability('STANDARD')),
             ),
           ),
         );
       },
+    );
+  }
+}
+
+// ── Stacked selected-model avatars (multi mode) ───────────────────────────────
+/// Compact overlapping circles for the selected models — the first two model
+/// icons plus a "+N" counter — instead of a row of chips. Tapping opens the
+/// composer menu to manage the selection.
+class _SelectedModelsBadge extends StatelessWidget {
+  const _SelectedModelsBadge({this.onTap});
+
+  final VoidCallback? onTap;
+
+  static const double _size = 30;
+  static const double _step = 20; // horizontal offset between circles
+
+  @override
+  Widget build(BuildContext context) {
+    return BlocBuilder<ChatBloc, ChatState>(
+      buildWhen: (a, b) => b is ChatLoaded,
+      builder: (context, state) {
+        if (state is! ChatLoaded ||
+            !state.multiMode ||
+            state.selectedModelIds.length < 2) {
+          return const SizedBox.shrink();
+        }
+
+        // Resolve ids → models with a nullable lookup (avoids the
+        // firstWhere/orElse covariance trap with AiModelModel).
+        final models = <AiModel>[];
+        for (final id in state.selectedModelIds) {
+          for (final m in state.availableModels) {
+            if (m.id == id) {
+              models.add(m);
+              break;
+            }
+          }
+        }
+        if (models.isEmpty) return const SizedBox.shrink();
+
+        final visible = models.take(2).toList();
+        final extra = models.length - visible.length;
+        final itemCount = visible.length + (extra > 0 ? 1 : 0);
+
+        return GestureDetector(
+          onTap: onTap,
+          child: SizedBox(
+            height: _size,
+            width: _step * (itemCount - 1) + _size,
+            child: Stack(
+              children: [
+                for (var i = 0; i < visible.length; i++)
+                  Positioned(
+                    left: i * _step,
+                    child: _AvatarCircle(
+                      child: CatalogVisuals.modelAvatar(
+                        visible[i].externalId,
+                        size: 15,
+                      ),
+                    ),
+                  ),
+                if (extra > 0)
+                  Positioned(
+                    left: visible.length * _step,
+                    child: _AvatarCircle(
+                      child: Text(
+                        '+$extra',
+                        style: const TextStyle(
+                          color: Colors.black87,
+                          fontSize: 11,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+}
+
+/// One circle of the stacked-avatar cluster: white face with a ring in the
+/// composer background colour so overlapping circles read as separate coins.
+class _AvatarCircle extends StatelessWidget {
+  const _AvatarCircle({required this.child});
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: _SelectedModelsBadge._size,
+      height: _SelectedModelsBadge._size,
+      decoration: BoxDecoration(
+        color: Colors.white,
+        shape: BoxShape.circle,
+        border: Border.all(color: context.cBg, width: 2),
+      ),
+      child: Center(child: child),
     );
   }
 }
@@ -317,14 +376,12 @@ class _Pill extends StatelessWidget {
     required this.icon,
     required this.label,
     required this.color,
-    this.iconColor,
     this.onClose,
   });
 
   final IconData icon;
   final String label;
   final Color color;
-  final Color? iconColor;
   final VoidCallback? onClose;
 
   @override
@@ -339,7 +396,7 @@ class _Pill extends StatelessWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, size: 14, color: iconColor ?? color),
+          Icon(icon, size: 14, color: color),
           const SizedBox(width: 5),
           ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 130),
@@ -357,8 +414,11 @@ class _Pill extends StatelessWidget {
             const SizedBox(width: 2),
             GestureDetector(
               onTap: onClose,
-              child: Icon(Icons.close_rounded,
-                  size: 14, color: context.cMuted.withValues(alpha: 0.8)),
+              child: Icon(
+                Icons.close_rounded,
+                size: 14,
+                color: context.cMuted.withValues(alpha: 0.8),
+              ),
             ),
           ],
         ],
@@ -443,9 +503,7 @@ class _ModeChip extends StatelessWidget {
           style: TextStyle(
             fontSize: 12,
             fontWeight: FontWeight.w600,
-            color: active
-                ? context.cFg
-                : context.cMuted.withValues(alpha: 0.8),
+            color: active ? context.cFg : context.cMuted.withValues(alpha: 0.8),
           ),
         ),
       ),
@@ -459,9 +517,9 @@ class _ComposerMenu extends StatelessWidget {
 
   void _comingSoon(BuildContext context, String what) {
     Navigator.pop(context);
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('$what — coming soon')),
-    );
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text('$what — coming soon')));
   }
 
   @override
@@ -570,11 +628,13 @@ class _ComposerMenu extends StatelessWidget {
                         ),
                       )
                     else
-                      ...models.map((m) => _ModelRow(
-                            model: m,
-                            selected: state.selectedModelIds.contains(m.id),
-                            singleMode: !state.multiMode,
-                          )),
+                      ...models.map(
+                        (m) => _ModelRow(
+                          model: m,
+                          selected: state.selectedModelIds.contains(m.id),
+                          singleMode: !state.multiMode,
+                        ),
+                      ),
                   ],
                 ),
               ),
@@ -619,7 +679,11 @@ class _Divider extends StatelessWidget {
 }
 
 class _MenuRow extends StatelessWidget {
-  const _MenuRow({required this.icon, required this.label, required this.onTap});
+  const _MenuRow({
+    required this.icon,
+    required this.label,
+    required this.onTap,
+  });
   final IconData icon;
   final String label;
   final VoidCallback onTap;
@@ -637,10 +701,7 @@ class _MenuRow extends StatelessWidget {
             children: [
               Icon(icon, size: 20, color: context.cMuted),
               const SizedBox(width: 14),
-              Text(
-                label,
-                style: TextStyle(color: context.cFg, fontSize: 15),
-              ),
+              Text(label, style: TextStyle(color: context.cFg, fontSize: 15)),
             ],
           ),
         ),
@@ -669,13 +730,19 @@ class _CapabilityRow extends StatelessWidget {
               SizedBox(
                 width: 20,
                 child: active
-                    ? Icon(Icons.check_rounded,
-                        size: 18, color: AppColors.landingPrimary)
+                    ? Icon(
+                        Icons.check_rounded,
+                        size: 18,
+                        color: AppColors.landingPrimary,
+                      )
                     : null,
               ),
               const SizedBox(width: 8),
-              Icon(CatalogVisuals.capabilityIcon(capability),
-                  size: 19, color: context.cMuted),
+              Icon(
+                CatalogVisuals.capabilityIcon(capability),
+                size: 19,
+                color: context.cMuted,
+              ),
               const SizedBox(width: 12),
               Text(
                 CatalogVisuals.capabilityLabel(capability),
@@ -722,8 +789,11 @@ class _ModelRow extends StatelessWidget {
                 child: selected
                     ? Padding(
                         padding: const EdgeInsets.only(top: 2),
-                        child: Icon(Icons.check_rounded,
-                            size: 18, color: AppColors.landingPrimary),
+                        child: Icon(
+                          Icons.check_rounded,
+                          size: 18,
+                          color: AppColors.landingPrimary,
+                        ),
                       )
                     : null,
               ),
@@ -735,8 +805,9 @@ class _ModelRow extends StatelessWidget {
                   color: color.withValues(alpha: 0.15),
                   borderRadius: BorderRadius.circular(8),
                 ),
-                child: Icon(CatalogVisuals.modelIcon(model.externalId),
-                    size: 17, color: color),
+                child: Center(
+                  child: CatalogVisuals.modelAvatar(model.externalId, size: 17),
+                ),
               ),
               const SizedBox(width: 12),
               Expanded(
@@ -810,7 +881,10 @@ class _EnhanceButton extends StatelessWidget {
               SizedBox(
                 width: 14,
                 height: 14,
-                child: CircularProgressIndicator(strokeWidth: 1.8, color: accent),
+                child: CircularProgressIndicator(
+                  strokeWidth: 1.8,
+                  color: accent,
+                ),
               )
             else
               Icon(
@@ -851,7 +925,9 @@ class _IconButton extends StatelessWidget {
         width: 38,
         height: 38,
         decoration: const BoxDecoration(
-            shape: BoxShape.circle, color: Colors.transparent),
+          shape: BoxShape.circle,
+          color: Colors.transparent,
+        ),
         child: Icon(
           icon,
           color: context.cMuted.withValues(alpha: onTap != null ? 0.75 : 0.35),

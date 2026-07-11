@@ -2,6 +2,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../core/errors/failures.dart';
 import '../../../core/utils/app_logger.dart';
 import '../domain/entities/user_entity.dart';
+import '../domain/usecases/get_cached_user_usecase.dart';
 import '../domain/usecases/google_login_usecase.dart';
 import '../domain/usecases/login_usecase.dart';
 import '../domain/usecases/logout_usecase.dart';
@@ -14,17 +15,39 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
   final RegisterUseCase _registerUseCase;
   final GoogleLoginUseCase _googleLoginUseCase;
   final LogoutUseCase _logoutUseCase;
+  final GetCachedUserUseCase _getCachedUserUseCase;
 
   AuthBloc(
     this._loginUseCase,
     this._registerUseCase,
     this._googleLoginUseCase,
     this._logoutUseCase,
+    this._getCachedUserUseCase,
   ) : super(AuthInitial()) {
     on<AuthLoginRequested>(_onLoginRequested);
     on<AuthRegisterRequested>(_onRegisterRequested);
     on<AuthGoogleSignInRequested>(_onGoogleSignInRequested);
     on<AuthLogoutRequested>(_onLogoutRequested);
+    on<AuthCheckRequested>(_onCheckRequested);
+  }
+
+  Future<void> _onCheckRequested(
+    AuthCheckRequested event,
+    Emitter<AuthState> emit,
+  ) async {
+    final result = await _getCachedUserUseCase();
+
+    result.fold(
+      (failure) {
+        logger.warning('No cached session found: ${failure.message}');
+      },
+      (user) {
+        if (user != null) {
+          logger.info('✅ Restored session for ${user.email}');
+          emit(AuthAuthenticated(user));
+        }
+      },
+    );
   }
 
   Future<void> _onLoginRequested(

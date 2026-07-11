@@ -53,4 +53,26 @@ abstract final class ApiConstants {
 
   // ── Subscription ──────────────────────────────────────────────────────────────
   static const String cashfreeWebhook        = '/api/subscription/webhooks/cashfree';
+  static const String subscriptionCurrent    = '/api/subscription/current';
+  static const String subscriptionCancel     = '/api/subscription/cancel';
+
+  // ── Plans ──────────────────────────────────────────────────────────────────────
+  static const String plans                  = '/api/plans'; // GET list (public)
+
+  // ── Dashboard ──────────────────────────────────────────────────────────────────
+  static const String dashboardSummary       = '/api/dashboard/summary';
+
+  // ── Wallet ─────────────────────────────────────────────────────────────────────
+  static const String wallet                 = '/api/wallet';
+  static const String walletTransactions     = '/api/wallet/transactions';
+
+  // ── Usage Logs ─────────────────────────────────────────────────────────────────
+  static const String usageLogs              = '/api/usage-logs';
+
+  // ── User Profile ───────────────────────────────────────────────────────────────
+  static const String userProfile            = '/api/users/profile'; // GET, PUT (multipart)
+  static String userById(String id)          => '/api/users/$id';    // DELETE (self)
+
+  // ── User Preferences ───────────────────────────────────────────────────────────
+  static const String preferences            = '/api/preferences'; // GET, PUT
 }

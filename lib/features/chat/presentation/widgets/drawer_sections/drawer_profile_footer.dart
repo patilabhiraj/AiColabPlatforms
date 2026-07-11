@@ -5,6 +5,7 @@ import '../../../../../core/theme/app_colors.dart';
 import '../../../../../core/theme/theme_controller.dart';
 import '../../../../../core/utils/app_logger.dart';
 import '../../../../auth/bloc/auth_bloc.dart';
+import '../../../../settings/presentation/pages/settings_hub_page.dart';
 
 class DrawerProfileFooter extends StatelessWidget {
   const DrawerProfileFooter({super.key});
@@ -175,49 +176,51 @@ class DrawerProfileFooter extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            ListTile(
-              leading: const Icon(Icons.person_outline_rounded, color: AppColors.darkForeground),
-              title: const Text('Profile', style: TextStyle(color: AppColors.darkForeground)),
-              onTap: () {
-                Navigator.pop(context);
-                logger.info('Navigate to profile');
-              },
-            ),
+            // ListTile(
+            //   leading: const Icon(Icons.person_outline_rounded, color: AppColors.darkForeground),
+            //   title: const Text('Profile', style: TextStyle(color: AppColors.darkForeground)),
+            //   onTap: () {
+            //     Navigator.pop(context);
+            //     logger.info('Navigate to profile');
+            //   },
+            // ),
             ListTile(
               leading: const Icon(Icons.settings_outlined, color: AppColors.darkForeground),
               title: const Text('Settings', style: TextStyle(color: AppColors.darkForeground)),
               onTap: () {
                 Navigator.pop(context);
-                logger.info('Navigate to settings');
-              },
-            ),
-            ListTile(
-              leading: const Icon(Icons.help_outline_rounded, color: AppColors.darkForeground),
-              title: const Text('Help & Support', style: TextStyle(color: AppColors.darkForeground)),
-              onTap: () {
-                Navigator.pop(context);
-                logger.info('Navigate to help');
-              },
-            ),
-            // Light / dark mode switch
-            ListenableBuilder(
-              listenable: sl<ThemeController>(),
-              builder: (context, _) {
-                final isDark = sl<ThemeController>().isDark;
-                return SwitchListTile(
-                  secondary: Icon(
-                    isDark ? Icons.dark_mode_rounded : Icons.light_mode_rounded,
-                    color: AppColors.darkForeground,
-                  ),
-                  title: const Text('Dark mode',
-                      style: TextStyle(color: AppColors.darkForeground)),
-                  value: isDark,
-                  activeThumbColor: AppColors.landingPrimary,
-                  onChanged: (wantDark) => sl<ThemeController>()
-                      .setMode(wantDark ? ThemeMode.dark : ThemeMode.light),
+                Navigator.of(context).push(
+                  MaterialPageRoute(builder: (_) => const SettingsHubPage()),
                 );
               },
             ),
+            // ListTile(
+            //   leading: const Icon(Icons.help_outline_rounded, color: AppColors.darkForeground),
+            //   title: const Text('Help & Support', style: TextStyle(color: AppColors.darkForeground)),
+            //   onTap: () {
+            //     Navigator.pop(context);
+            //     logger.info('Navigate to help');
+            //   },
+            // ),
+            // Light / dark mode switch
+            // ListenableBuilder(
+            //   listenable: sl<ThemeController>(),
+            //   builder: (context, _) {
+            //     final isDark = sl<ThemeController>().isDark;
+                // return SwitchListTile(
+                //   secondary: Icon(
+                //     isDark ? Icons.dark_mode_rounded : Icons.light_mode_rounded,
+                //     color: AppColors.darkForeground,
+                //   ),
+                //   title: const Text('Dark mode',
+                //       style: TextStyle(color: AppColors.darkForeground)),
+                //   value: isDark,
+                //   activeThumbColor: AppColors.landingPrimary,
+                //   onChanged: (wantDark) => sl<ThemeController>()
+                //       .setMode(wantDark ? ThemeMode.dark : ThemeMode.light),
+                // );
+            //   },
+            // ),
             const Divider(color: AppColors.darkBorder, height: 1),
             ListTile(
               leading: const Icon(Icons.logout_rounded, color: Colors.red),

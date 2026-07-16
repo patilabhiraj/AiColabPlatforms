@@ -647,9 +647,16 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
 
     if (finalState.streamingContent != null) {
       final rawContent = finalState.streamingContent!;
+      print('📨 DEBUG: Final streaming content received (length: ${rawContent.length})');
+      
       final suggestedQuestions = _extractSuggestedQuestions(rawContent);
       final cleanedContent = _cleanStreamedContent(rawContent);
       final modelName = _modelName(modelId);
+
+      print('✨ DEBUG: Creating message with ${suggestedQuestions.length} suggested questions');
+      if (suggestedQuestions.isNotEmpty) {
+        print('📝 DEBUG: Suggested questions: $suggestedQuestions');
+      }
 
       emit(
         finalState.copyWith(
@@ -903,24 +910,39 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
   }
 
   List<String> _extractSuggestedQuestions(String content) {
+    print('🔍 DEBUG: Extracting questions from content (length: ${content.length})');
+    print('🔍 DEBUG: Content preview: ${content.substring(0, content.length > 200 ? 200 : content.length)}...');
+    
     final questions = <String>[];
     final jsonArrayPattern = RegExp(
       r'\[\s*"([^"]+)"(?:\s*,\s*"([^"]+)")*\s*\]',
       multiLine: true,
     );
 
-    for (final match in jsonArrayPattern.allMatches(content)) {
+    final matches = jsonArrayPattern.allMatches(content).toList();
+    print('🔍 DEBUG: Found ${matches.length} potential JSON arrays');
+
+    for (final match in matches) {
       try {
         final jsonStr = match.group(0);
+        print('🔍 DEBUG: Trying to parse: $jsonStr');
         if (jsonStr != null) {
           final decoded = jsonDecode(jsonStr);
           if (decoded is List) {
             questions.addAll(decoded.map((e) => e.toString()));
+            print('✅ DEBUG: Successfully extracted ${decoded.length} questions');
           }
         }
-      } catch (_) {}
+      } catch (e) {
+        print('❌ DEBUG: Failed to parse JSON: $e');
+      }
     }
 
+    print('🔍 DEBUG: Total questions extracted: ${questions.length}');
+    if (questions.isNotEmpty) {
+      print('📝 DEBUG: Questions: $questions');
+    }
+    
     return questions;
   }
 }

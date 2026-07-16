@@ -24,6 +24,14 @@ class ChatBubble extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Debug logging
+    if (!message.isUser) {
+      print('🎨 UI DEBUG: Rendering AI message');
+      print('🎨 UI DEBUG: isStreaming: $isStreaming');
+      print('🎨 UI DEBUG: suggestedQuestions: ${message.suggestedQuestions}');
+      print('🎨 UI DEBUG: suggestedQuestions isEmpty: ${message.suggestedQuestions?.isEmpty ?? true}');
+    }
+    
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 5),
       child: message.isUser

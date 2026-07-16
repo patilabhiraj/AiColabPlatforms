@@ -12,6 +12,7 @@ abstract class AuthRemoteDataSource {
   Future<void> resetPassword(String email, String otp, String newPassword);
   Future<void> verifyEmailOtp(String email, String otp);
   Future<void> resendEmailOtp(String email);
+  Future<UserModel> getProfile();
 }
 
 class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
@@ -106,6 +107,12 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
       ApiConstants.resendEmailOtp,
       data: {"email": email},
     );
+  }
+
+  @override
+  Future<UserModel> getProfile() async {
+    final response = await apiClient.dio.get(ApiConstants.userProfile);
+    return UserModel.fromJson(response.data);
   }
 
   // ── helpers ───────────────────────────────────────────────────────────────

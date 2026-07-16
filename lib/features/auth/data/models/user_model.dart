@@ -13,7 +13,7 @@ class UserModel extends UserEntity {
   factory UserModel.fromJson(Map<String, dynamic> json) {
     // Backend wraps response in a 'data' block
     final dataJson = json['data'] as Map<String, dynamic>?;
-    final userJson = dataJson?['user'] ?? json['user'] ?? json;
+    final userJson = dataJson?['user'] ?? dataJson ?? json['user'] ?? json;
     
     final extractedToken = json['token'] ?? 
                            json['accessToken'] ?? 

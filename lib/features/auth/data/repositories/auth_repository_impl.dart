@@ -158,13 +158,30 @@ class AuthRepositoryImpl implements AuthRepository {
       }
       final payload = utf8.decode(base64Url.decode(base64Url.normalize(parts[1])));
       final map = json.decode(payload) as Map<String, dynamic>;
-      final user = UserModel(
+      var user = UserModel(
         id: (map['id'] ?? map['sub'] ?? '').toString(),
         email: map['email'] ?? '',
         firstName: map['firstName'] ?? map['given_name'] ?? 'User',
         lastName: map['lastName'] ?? map['family_name'] ?? '',
         token: token,
       );
+
+      // The JWT only carries id/role — fetch the real profile (name, email,
+      // photo) so the drawer/header show the actual user, not "User".
+      try {
+        final profile = await remoteDataSource.getProfile();
+        user = UserModel(
+          id: user.id,
+          email: profile.email.isNotEmpty ? profile.email : user.email,
+          firstName: profile.firstName.isNotEmpty ? profile.firstName : user.firstName,
+          lastName: profile.lastName.isNotEmpty ? profile.lastName : user.lastName,
+          token: token,
+          profileImageUrl: profile.profileImageUrl,
+        );
+      } catch (e) {
+        print('DEBUG WARNING: getCachedUser could not refresh profile from API: $e');
+      }
+
       print('DEBUG: AuthRepositoryImpl.getCachedUser session parsed successfully for ${user.email}!');
       return Right(user);
     } catch (e) {

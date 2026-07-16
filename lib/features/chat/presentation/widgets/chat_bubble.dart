@@ -450,7 +450,7 @@ class _ModelCardState extends State<_ModelCard> {
               Container(width: 3, color: color.withValues(alpha: 0.7)),
               Expanded(
                 child: Padding(
-                  padding: const EdgeInsets.fromLTRB(15, 14, 15, 12),
+                  padding: const EdgeInsets.fromLTRB(15, 14, 10, 12),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [

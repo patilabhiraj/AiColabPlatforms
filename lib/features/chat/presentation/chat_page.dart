@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../auth/bloc/auth_bloc.dart';
 import '../domain/entities/chat_message.dart';
 import '../bloc/chat_bloc.dart';
 import 'widgets/chat_bubble.dart';
@@ -19,11 +20,38 @@ class ChatPage extends StatefulWidget {
 class _ChatPageState extends State<ChatPage> {
   final _scrollCtrl = ScrollController();
   bool _isStreaming = false;
+  // True once the user scrolls away from the bottom mid-stream — suppresses
+  // auto-scroll until they scroll back down themselves or the stream ends.
+  bool _userScrolledAway = false;
+  // True while a conversation's messages are cleared and being (re)loaded —
+  // set on selection (including re-selecting the chat that's already open,
+  // which clears then reloads the same id) and cleared once loaded, so the
+  // next non-empty emission always scrolls to the bottom.
+  bool _awaitingConversationLoad = false;
+
+  static const double _bottomThreshold = 80;
+
+  @override
+  void initState() {
+    super.initState();
+    _scrollCtrl.addListener(_onScroll);
+  }
 
   @override
   void dispose() {
+    _scrollCtrl.removeListener(_onScroll);
     _scrollCtrl.dispose();
     super.dispose();
+  }
+
+  void _onScroll() {
+    if (!_scrollCtrl.hasClients) return;
+    final distanceFromBottom =
+        _scrollCtrl.position.maxScrollExtent - _scrollCtrl.position.pixels;
+    final nearBottom = distanceFromBottom <= _bottomThreshold;
+    if (_isStreaming) {
+      _userScrolledAway = !nearBottom;
+    }
   }
 
   void _scrollToBottom({bool animated = true}) {
@@ -72,11 +100,13 @@ class _ChatPageState extends State<ChatPage> {
                       listenWhen: (prev, curr) {
                         if (curr is! ChatLoaded) return false;
                         if (prev is! ChatLoaded) return true;
-                        return curr.messages.length > prev.messages.length ||
+                        return curr.messages.length != prev.messages.length ||
                             curr.isStreaming != prev.isStreaming ||
                             (curr.isStreaming &&
                                 curr.streamingContent !=
                                     prev.streamingContent) ||
+                            curr.selectedConversation?.id !=
+                                prev.selectedConversation?.id ||
                             // Follow multi-model streaming (content changes in place).
                             (curr.messages.isNotEmpty &&
                                 prev.messages.isNotEmpty &&
@@ -84,12 +114,27 @@ class _ChatPageState extends State<ChatPage> {
                       },
                       listener: (context, state) {
                         if (state is! ChatLoaded) return;
+
+                        // Selecting a chat — including re-selecting the one
+                        // that's already open — clears its messages then
+                        // reloads them. Treat every such reload as "just
+                        // opened" and land at the bottom once loaded, even if
+                        // the user had scrolled away before.
+                        if (state.messages.isEmpty) {
+                          _awaitingConversationLoad = true;
+                          _userScrolledAway = false;
+                        } else if (_awaitingConversationLoad) {
+                          _awaitingConversationLoad = false;
+                          _scrollToBottom(animated: false);
+                        }
+
                         final liveMulti =
                             state.messages.isNotEmpty &&
                             !state.messages.last.isUser &&
                             state.messages.last.isMultiModel &&
                             state.isSending;
                         final streaming = state.isStreaming || liveMulti;
+                        final wasStreaming = _isStreaming;
                         // While a multi-model answer is streaming, each chunk
                         // updates a model's content in place — jumping to the
                         // bottom on every chunk fights the per-model "scroll to
@@ -99,10 +144,17 @@ class _ChatPageState extends State<ChatPage> {
                         // streaming and for the very first frame a multi-model
                         // answer appears (so the new message is at least
                         // brought into view once).
-                        final justStartedMulti = liveMulti && !_isStreaming;
-                        if (state.isStreaming || justStartedMulti) {
+                        final justStartedMulti = liveMulti && !wasStreaming;
+
+                        if (wasStreaming && !streaming) {
+                          // Stream just finished — snap to the bottom even if
+                          // the reader had scrolled away to read something else.
+                          _userScrolledAway = false;
+                          _scrollToBottom(animated: true);
+                        } else if ((state.isStreaming || justStartedMulti) &&
+                            !_userScrolledAway) {
                           // Instant jump while streaming, smooth animate for new messages
-                          _scrollToBottom(animated: !_isStreaming);
+                          _scrollToBottom(animated: !wasStreaming);
                         }
                         _isStreaming = streaming;
                       },
@@ -365,11 +417,31 @@ class _CustomHeader extends StatelessWidget {
             ),
           ),
 
-          // Profile/Account button (right)
-          _FloatingButton(
-            icon: Icons.account_circle_outlined,
-            onPressed: () {
-              // TODO: Open profile/account page
+          // Right button: profile on the welcome screen, "new chat" once a
+          // conversation is active.
+          BlocBuilder<ChatBloc, ChatState>(
+            buildWhen: (prev, curr) {
+              bool isEmpty(ChatState s) =>
+                  s is! ChatLoaded ||
+                  (s.messages.isEmpty && !s.isSending && !s.isStreaming);
+              return isEmpty(prev) != isEmpty(curr);
+            },
+            builder: (context, state) {
+              final isChatActive =
+                  state is ChatLoaded &&
+                  (state.messages.isNotEmpty ||
+                      state.isSending ||
+                      state.isStreaming);
+
+              if (!isChatActive) {
+                return const _ProfileButton();
+              }
+
+              return _FloatingButton(
+                icon: Icons.add_rounded,
+                onPressed: () =>
+                    context.read<ChatBloc>().add(ChatStartNewConversation()),
+              );
             },
           ),
         ],
@@ -405,6 +477,54 @@ class _FloatingButton extends StatelessWidget {
             color: context.cFg.withValues(alpha: 0.9),
             size: 27,
           ),
+        ),
+      ),
+    );
+  }
+}
+
+// ── Profile button (shows the user's photo when set) ────────────────────────
+class _ProfileButton extends StatelessWidget {
+  const _ProfileButton();
+
+  @override
+  Widget build(BuildContext context) {
+    final authState = context.watch<AuthBloc>().state;
+    final profileImageUrl = authState is AuthAuthenticated
+        ? authState.user.profileImageUrl
+        : null;
+
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: () {
+          // TODO: Open profile/account page
+        },
+        child: Container(
+          width: 40,
+          height: 40,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            color: context.cCard.withValues(alpha: context.isDark ? 0.5 : 0.9),
+            border: Border.all(color: context.cBorder.withValues(alpha: 0.4)),
+          ),
+          child: profileImageUrl != null && profileImageUrl.isNotEmpty
+              ? ClipOval(
+                  child: Image.network(
+                    profileImageUrl,
+                    fit: BoxFit.cover,
+                    errorBuilder: (context, error, stackTrace) => Icon(
+                      Icons.account_circle_outlined,
+                      color: context.cFg.withValues(alpha: 0.9),
+                      size: 27,
+                    ),
+                  ),
+                )
+              : Icon(
+                  Icons.account_circle_outlined,
+                  color: context.cFg.withValues(alpha: 0.9),
+                  size: 27,
+                ),
         ),
       ),
     );

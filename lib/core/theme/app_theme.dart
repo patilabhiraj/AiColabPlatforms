@@ -82,10 +82,13 @@ abstract final class AppTheme {
         ),
 
         // ── Card ────────────────────────────────────────────────────────────────
+        // A whisper of elevation + a soft near-black shadow lifts white cards
+        // off the tinted canvas so they read as distinct surfaces.
         cardTheme: CardThemeData(
           color: AppColors.lightCard,
           surfaceTintColor: Colors.transparent,
-          elevation: 0,
+          shadowColor: AppColors.lightShadow,
+          elevation: 2,
           shape: RoundedRectangleBorder(
             borderRadius: AppRadius.borderLg,
             side: const BorderSide(color: AppColors.lightBorder),
@@ -130,7 +133,7 @@ abstract final class AppTheme {
         // ── Input / TextField ────────────────────────────────────────────────────
         inputDecorationTheme: InputDecorationTheme(
           filled: true,
-          fillColor: AppColors.lightBackground,
+          fillColor: AppColors.lightCard,
           hintStyle: const TextStyle(color: AppColors.lightMutedForeground),
           border: OutlineInputBorder(
             borderRadius: AppRadius.borderMd,
@@ -320,7 +323,8 @@ abstract final class AppTheme {
         cardTheme: CardThemeData(
           color: AppColors.darkCard,
           surfaceTintColor: Colors.transparent,
-          elevation: 0,
+          shadowColor: Colors.black,
+          elevation: 2,
           shape: RoundedRectangleBorder(
             borderRadius: AppRadius.borderLg,
             side: const BorderSide(color: AppColors.darkBorder),

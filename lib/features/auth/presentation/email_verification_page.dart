@@ -113,12 +113,12 @@ class _EmailVerificationPageState extends State<EmailVerificationPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.darkBackground,
+      backgroundColor: context.cBg,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: AppColors.darkForeground),
+          icon: Icon(Icons.arrow_back, color: context.cFg),
           onPressed: () => context.go(AppRouter.login),
         ),
       ),
@@ -167,8 +167,8 @@ class _EmailVerificationPageState extends State<EmailVerificationPage> {
               Text(
                 'We sent a verification code to\n${widget.email}',
                 textAlign: TextAlign.center,
-                style: const TextStyle(
-                  color: AppColors.darkMutedForeground,
+                style: TextStyle(
+                  color: context.cMuted,
                   fontSize: 14,
                 ),
               ),
@@ -187,25 +187,25 @@ class _EmailVerificationPageState extends State<EmailVerificationPage> {
                       textAlign: TextAlign.center,
                       keyboardType: TextInputType.number,
                       maxLength: 1,
-                      style: const TextStyle(
-                        color: AppColors.darkForeground,
+                      style: TextStyle(
+                        color: context.cFg,
                         fontSize: 24,
                         fontWeight: FontWeight.w600,
                       ),
                       decoration: InputDecoration(
                         counterText: '',
                         filled: true,
-                        fillColor: AppColors.darkCard,
+                        fillColor: context.cCard,
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(12),
                           borderSide: BorderSide(
-                            color: AppColors.darkBorder.withValues(alpha: 0.3),
+                            color: context.cBorder.withValues(alpha: context.isDark ? 0.3 : 0.7),
                           ),
                         ),
                         enabledBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(12),
                           borderSide: BorderSide(
-                            color: AppColors.darkBorder.withValues(alpha: 0.3),
+                            color: context.cBorder.withValues(alpha: context.isDark ? 0.3 : 0.7),
                           ),
                         ),
                         focusedBorder: OutlineInputBorder(
@@ -271,10 +271,10 @@ class _EmailVerificationPageState extends State<EmailVerificationPage> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  const Text(
+                  Text(
                     "Didn't receive code? ",
                     style: TextStyle(
-                      color: AppColors.darkMutedForeground,
+                      color: context.cMuted,
                       fontSize: 14,
                     ),
                   ),

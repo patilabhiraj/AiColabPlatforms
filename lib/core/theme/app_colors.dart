@@ -11,6 +11,23 @@ extension AppThemeX on BuildContext {
   Color get cMuted  => isDark ? AppColors.darkMutedForeground : AppColors.lightMutedForeground;
   Color get cError  => isDark ? AppColors.darkDestructive     : AppColors.lightDestructive;
   Color get cSidebar=> isDark ? AppColors.darkSidebar         : AppColors.lightSidebar;
+
+  /// A soft, theme-appropriate ambient shadow colour. In light mode this lifts
+  /// white cards off the tinted canvas; in dark mode a deeper black adds depth.
+  Color get cShadow => isDark
+      ? const Color(0x33000000) // 20% black
+      : AppColors.lightShadow;  // ~8% near-black
+
+  /// A ready-to-use soft card shadow, tuned per theme. Spread across a couple
+  /// of layers for a natural, non-harsh lift.
+  List<BoxShadow> get softShadow => isDark
+      ? const [
+          BoxShadow(color: Color(0x40000000), blurRadius: 12, offset: Offset(0, 4)),
+        ]
+      : const [
+          BoxShadow(color: Color(0x0F121114), blurRadius: 2, offset: Offset(0, 1)),
+          BoxShadow(color: Color(0x14121114), blurRadius: 16, offset: Offset(0, 6)),
+        ];
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -32,19 +49,20 @@ abstract final class AppColors {
   // LIGHT MODE TOKENS - Beautiful & Professional 🎨
   // ─────────────────────────────────────────────────────────────────────────────
 
-  // Light gray-pink background for warmth and contrast
-  static const Color lightBackground = Color(0xFFF7F5F6);
+  // Soft neutral canvas with a barely-there warm tint. A touch cooler/deeper
+  // than pure white so pure-white cards visibly lift off it.
+  static const Color lightBackground = Color(0xFFF4F2F4);
 
-  // Deep rich black for excellent readability
-  static const Color lightForeground = Color(0xFF0D0D0D);
+  // Deep rich near-black for excellent readability
+  static const Color lightForeground = Color(0xFF121114);
 
-  // Pure white cards that really pop from the background
+  // Pure white cards that really pop from the tinted background
   static const Color lightCard = Color(0xFFFFFFFF);
-  static const Color lightCardForeground = Color(0xFF0D0D0D);
+  static const Color lightCardForeground = Color(0xFF121114);
 
   // Pure white popovers
   static const Color lightPopover = Color(0xFFFFFFFF);
-  static const Color lightPopoverForeground = Color(0xFF0D0D0D);
+  static const Color lightPopoverForeground = Color(0xFF121114);
 
   // Brand primary color - matches landing page
   static const Color lightPrimary = landingPrimary;
@@ -52,37 +70,40 @@ abstract final class AppColors {
   static const Color lightPrimaryForeground = Color(0xFFFFFFFF);
 
   // Light gray-pink for secondary elements
-  static const Color lightSecondary = Color(0xFFF0EEF0);
-  static const Color lightSecondaryForeground = Color(0xFF0D0D0D);
+  static const Color lightSecondary = Color(0xFFEDEAED);
+  static const Color lightSecondaryForeground = Color(0xFF121114);
 
   // Visible muted background
-  static const Color lightMuted = Color(0xFFE8E5E7);
-  // Muted text - still readable
-  static const Color lightMutedForeground = Color(0xFF5A5A5A);
+  static const Color lightMuted = Color(0xFFE7E3E7);
+  // Muted text - clearly readable, softer than the foreground
+  static const Color lightMutedForeground = Color(0xFF6B6870);
 
   // Accent - soft pink/purple tint
-  static const Color lightAccent = Color(0xFFFFE8F1);
-  static const Color lightAccentForeground = Color(0xFF0D0D0D);
+  static const Color lightAccent = Color(0xFFFCE7F0);
+  static const Color lightAccentForeground = Color(0xFF121114);
 
   // Destructive red - clearly visible
   static const Color lightDestructive = Color(0xFFDC2626);
 
-  // Borders - clearly visible with warmth
-  static const Color lightBorder = Color(0xFFD4CED1);
-  static const Color lightInput = Color(0xFFD4CED1);
+  // Borders - visible but soft, with a hint of the warm background tint
+  static const Color lightBorder = Color(0xFFE2DDE2);
+  static const Color lightInput = Color(0xFFDDD7DD);
 
   // Focus ring - brand color
   static const Color lightRing = landingPrimary;
 
-  // Sidebar (Light) - Very light warm gray
-  static const Color lightSidebar = Color(0xFFFBFAFB);
-  static const Color lightSidebarForeground = Color(0xFF0D0D0D);
+  // Sidebar (Light) - Clean near-white, a hair brighter than the canvas
+  static const Color lightSidebar = Color(0xFFFCFBFC);
+  static const Color lightSidebarForeground = Color(0xFF121114);
   static const Color lightSidebarPrimary = landingPrimary;
   static const Color lightSidebarPrimaryForeground = Color(0xFFFFFFFF);
-  static const Color lightSidebarAccent = Color(0xFFFFE8F1);
-  static const Color lightSidebarAccentForeground = Color(0xFF0D0D0D);
-  static const Color lightSidebarBorder = Color(0xFFD4CED1);
+  static const Color lightSidebarAccent = Color(0xFFFCE7F0);
+  static const Color lightSidebarAccentForeground = Color(0xFF121114);
+  static const Color lightSidebarBorder = Color(0xFFE2DDE2);
   static const Color lightSidebarRing = landingPrimary;
+
+  // Soft ambient shadow for lifting light-mode cards off the canvas.
+  static const Color lightShadow = Color(0x14121114); // ~8% near-black
 
   // Charts (Light)
   // oklch(0.646 0.222 41.116) → vivid orange

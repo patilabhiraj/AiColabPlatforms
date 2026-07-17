@@ -63,6 +63,8 @@ class SettingsCard extends StatelessWidget {
         color: context.cCard.withValues(alpha: context.isDark ? 0.55 : 1),
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: context.cBorder.withValues(alpha: 0.6)),
+        // Soft lift so cards read as raised surfaces (esp. in light mode).
+        boxShadow: context.softShadow,
       ),
       child: child,
     );

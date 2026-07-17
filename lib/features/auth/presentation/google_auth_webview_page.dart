@@ -104,16 +104,16 @@ class _GoogleAuthWebViewPageState extends State<GoogleAuthWebViewPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.darkBackground,
+      backgroundColor: context.cBg,
       appBar: AppBar(
-        title: const Text(
+        title: Text(
           'Sign in with Google',
-          style: TextStyle(color: AppColors.darkForeground, fontSize: 16),
+          style: TextStyle(color: context.cFg, fontSize: 16),
         ),
-        backgroundColor: AppColors.darkCard,
+        backgroundColor: context.cCard,
         elevation: 0.5,
         leading: IconButton(
-          icon: const Icon(Icons.close, color: AppColors.darkForeground),
+          icon: Icon(Icons.close, color: context.cFg),
           onPressed: () => Navigator.of(context).pop(),
         ),
       ),

@@ -1,3 +1,5 @@
+import 'dart:ui';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -178,27 +180,47 @@ class _AiBubble extends StatelessWidget {
                 ),
               ),
 
-            // Bubble
-            Container(
-              padding: const EdgeInsets.fromLTRB(16, 14, 16, 12),
-              decoration: BoxDecoration(
-                borderRadius: const BorderRadius.only(
-                  topLeft: Radius.circular(4),
-                  topRight: Radius.circular(20),
-                  bottomLeft: Radius.circular(20),
-                  bottomRight: Radius.circular(20),
-                ),
-                border: Border.all(color: border.withValues(alpha: 0.9)),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(
-                      alpha: context.isDark ? 0.1 : 0.05,
-                    ),
-                    blurRadius: 8,
-                    offset: const Offset(0, 2),
-                  ),
-                ],
+            // Bubble with Glassmorphism Effect ✨
+            ClipRRect(
+              borderRadius: const BorderRadius.only(
+                topLeft: Radius.circular(4),
+                topRight: Radius.circular(20),
+                bottomLeft: Radius.circular(20),
+                bottomRight: Radius.circular(20),
               ),
+              child: BackdropFilter(
+                filter: ImageFilter.blur(
+                  sigmaX: context.isDark ? 12 : 8,
+                  sigmaY: context.isDark ? 12 : 8,
+                ),
+                child: Container(
+                  padding: const EdgeInsets.fromLTRB(16, 14, 16, 12),
+                  decoration: BoxDecoration(
+                    color: context.isDark
+                        ? card.withValues(alpha: 0.7)
+                        : card.withValues(alpha: 0.85),
+                    borderRadius: const BorderRadius.only(
+                      topLeft: Radius.circular(4),
+                      topRight: Radius.circular(20),
+                      bottomLeft: Radius.circular(20),
+                      bottomRight: Radius.circular(20),
+                    ),
+                    border: Border.all(
+                      color: border.withValues(
+                        alpha: context.isDark ? 0.9 : 1.0,
+                      ),
+                      width: context.isDark ? 1 : 1.5,
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(
+                          alpha: context.isDark ? 0.1 : 0.06,
+                        ),
+                        blurRadius: context.isDark ? 8 : 12,
+                        offset: Offset(0, context.isDark ? 2 : 3),
+                      ),
+                    ],
+                  ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -227,17 +249,22 @@ class _AiBubble extends StatelessWidget {
                                     letterSpacing: 0.1,
                                   ),
                                   code: TextStyle(
-                                    backgroundColor: card.withValues(
-                                      alpha: 0.5,
-                                    ),
+                                    backgroundColor: context.isDark
+                                        ? card.withValues(alpha: 0.5)
+                                        : AppColors.lightMuted,
                                     color: AppColors.landingPrimary,
                                     fontSize: 14,
                                   ),
                                   codeblockDecoration: BoxDecoration(
-                                    color: card.withValues(
-                                      alpha: context.isDark ? 0.3 : 0.8,
-                                    ),
+                                    color: context.isDark
+                                        ? card.withValues(alpha: 0.3)
+                                        : AppColors.lightMuted,
                                     borderRadius: BorderRadius.circular(8),
+                                    border: Border.all(
+                                      color: border.withValues(
+                                        alpha: context.isDark ? 0.3 : 0.5,
+                                      ),
+                                    ),
                                   ),
                                 ),
                               ),
@@ -264,6 +291,8 @@ class _AiBubble extends StatelessWidget {
                     ),
                   ],
                 ],
+              ),
+                ),
               ),
             ),
           ],
@@ -1025,15 +1054,23 @@ class _ActionButton extends StatelessWidget {
     final effectiveColor = isActive
         ? (activeColor ?? AppColors.landingPrimary)
         : color.withValues(alpha: 0.8);
+    final isDark = context.isDark;
+    
     return GestureDetector(
       onTap: onTap,
       child: Container(
         padding: const EdgeInsets.all(6),
         decoration: BoxDecoration(
           color: isActive
-              ? effectiveColor.withValues(alpha: 0.15)
-              : card.withValues(alpha: 0.4),
+              ? effectiveColor.withValues(alpha: isDark ? 0.15 : 0.1)
+              : card.withValues(alpha: isDark ? 0.4 : 0.05),
           borderRadius: BorderRadius.circular(6),
+          border: !isDark
+              ? Border.all(
+                  color: context.cBorder.withValues(alpha: 0.3),
+                  width: 0.5,
+                )
+              : null,
         ),
         child: Icon(icon, size: 14, color: effectiveColor),
       ),
@@ -1087,28 +1124,48 @@ class _QuestionChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = context.isDark;
     return GestureDetector(
       onTap: () => onTap?.call(question),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
-        decoration: BoxDecoration(
-          color: context.cCard.withValues(alpha: context.isDark ? 0.25 : 0.6),
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(
-            color: AppColors.landingPrimary.withValues(
-              alpha: context.isDark ? 0.3 : 0.25,
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(20),
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 6, sigmaY: 6),
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
+            decoration: BoxDecoration(
+              color: isDark
+                  ? context.cCard.withValues(alpha: 0.25)
+                  : AppColors.lightAccent.withValues(alpha: 0.6),
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(
+                color: AppColors.landingPrimary.withValues(
+                  alpha: isDark ? 0.3 : 0.4,
+                ),
+                width: isDark ? 1 : 1.5,
+              ),
+              boxShadow: !isDark
+                  ? [
+                      BoxShadow(
+                        color: AppColors.landingPrimary.withValues(alpha: 0.08),
+                        blurRadius: 8,
+                        offset: const Offset(0, 2),
+                      ),
+                    ]
+                  : null,
+            ),
+            child: Text(
+              question,
+              style: TextStyle(
+                color: context.cFg.withValues(alpha: 0.9),
+                fontSize: 13,
+                height: 1.3,
+                fontWeight: FontWeight.w500,
+              ),
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
             ),
           ),
-        ),
-        child: Text(
-          question,
-          style: TextStyle(
-            color: context.cFg.withValues(alpha: 0.9),
-            fontSize: 13,
-            height: 1.3,
-          ),
-          maxLines: 2,
-          overflow: TextOverflow.ellipsis,
         ),
       ),
     );

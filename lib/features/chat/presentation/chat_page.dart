@@ -1,3 +1,5 @@
+import 'dart:ui';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -20,6 +22,7 @@ class ChatPage extends StatefulWidget {
 class _ChatPageState extends State<ChatPage> {
   final _scrollCtrl = ScrollController();
   bool _isStreaming = false;
+  bool _showAppBar = false; // ✨ Track scroll for appbar
   // True once the user scrolls away from the bottom mid-stream — suppresses
   // auto-scroll until they scroll back down themselves or the stream ends.
   bool _userScrolledAway = false;
@@ -30,6 +33,7 @@ class _ChatPageState extends State<ChatPage> {
   bool _awaitingConversationLoad = false;
 
   static const double _bottomThreshold = 80;
+  static const double _appBarThreshold = 120; // ✨ Show appbar after this
 
   @override
   void initState() {
@@ -46,6 +50,13 @@ class _ChatPageState extends State<ChatPage> {
 
   void _onScroll() {
     if (!_scrollCtrl.hasClients) return;
+    
+    // ✨ Check scroll position for appbar visibility
+    final shouldShow = _scrollCtrl.offset > _appBarThreshold;
+    if (shouldShow != _showAppBar) {
+      setState(() => _showAppBar = shouldShow);
+    }
+    
     final distanceFromBottom =
         _scrollCtrl.position.maxScrollExtent - _scrollCtrl.position.pixels;
     final nearBottom = distanceFromBottom <= _bottomThreshold;
@@ -256,6 +267,40 @@ class _ChatPageState extends State<ChatPage> {
                 ],
               ),
             ),
+            
+            // ✨ Transparent Glassmorphism AppBar (appears on scroll)
+            if (_showAppBar)
+              Positioned(
+                top: 0,
+                left: 0,
+                right: 0,
+                child: SafeArea(
+                  bottom: false,
+                  child: AnimatedOpacity(
+                    opacity: _showAppBar ? 1.0 : 0.0,
+                    duration: const Duration(milliseconds: 200),
+                    child: BlocBuilder<ChatBloc, ChatState>(
+                      builder: (context, state) {
+                        final title = state is ChatLoaded
+                            ? (state.selectedConversation?.title ?? 'Chat')
+                            : 'Chat';
+                        return _TransparentAppBar(
+                          title: title,
+                          onBackPressed: () {
+                            // Scroll back to top
+                            _scrollCtrl.animateTo(
+                              0,
+                              duration: const Duration(milliseconds: 300),
+                              curve: Curves.easeOut,
+                            );
+                          },
+                          onMenuPressed: () => Scaffold.of(context).openDrawer(),
+                        );
+                      },
+                    ),
+                  ),
+                ),
+              ),
           ],
         ),
       ),
@@ -294,7 +339,7 @@ class _ChatBackgroundState extends State<_ChatBackground>
         children: [
           DecoratedBox(decoration: BoxDecoration(color: bg)),
 
-          // Subtle brand glow at top (lighter in light mode)
+          // Subtle brand glow at top (more visible in light mode for warmth)
           DecoratedBox(
             decoration: BoxDecoration(
               gradient: RadialGradient(
@@ -302,7 +347,7 @@ class _ChatBackgroundState extends State<_ChatBackground>
                 radius: 1.2,
                 colors: [
                   AppColors.landingPrimary.withValues(
-                    alpha: isDark ? 0.15 : 0.08,
+                    alpha: isDark ? 0.15 : 0.12,
                   ),
                   bg.withValues(alpha: 0.0),
                 ],
@@ -459,23 +504,44 @@ class _FloatingButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = context.isDark;
     return Material(
       color: Colors.transparent,
       child: InkWell(
         onTap: onPressed,
-        // borderRadius: BorderRadius.circular(20),
-        child: Container(
-          width: 40,
-          height: 40,
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            color: context.cCard.withValues(alpha: context.isDark ? 0.5 : 0.9),
-            border: Border.all(color: context.cBorder.withValues(alpha: 0.4)),
-          ),
-          child: Icon(
-            icon,
-            color: context.cFg.withValues(alpha: 0.9),
-            size: 27,
+        borderRadius: BorderRadius.circular(20),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(20),
+          child: BackdropFilter(
+            filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
+            child: Container(
+              width: 40,
+              height: 40,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: isDark
+                    ? context.cCard.withValues(alpha: 0.5)
+                    : context.cCard.withValues(alpha: 0.7),
+                border: Border.all(
+                  color: context.cBorder.withValues(alpha: isDark ? 0.4 : 0.6),
+                  width: isDark ? 1 : 1.5,
+                ),
+                boxShadow: !isDark
+                    ? [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.08),
+                          blurRadius: 8,
+                          offset: const Offset(0, 2),
+                        ),
+                      ]
+                    : null,
+              ),
+              child: Icon(
+                icon,
+                color: context.cFg.withValues(alpha: 0.9),
+                size: 27,
+              ),
+            ),
           ),
         ),
       ),
@@ -597,6 +663,116 @@ class _MessagesList extends StatelessWidget {
           ),
         );
       },
+    );
+  }
+}
+
+// ── Transparent Glassmorphism AppBar ─────────────────────────────────────────
+class _TransparentAppBar extends StatelessWidget {
+  const _TransparentAppBar({
+    required this.title,
+    required this.onBackPressed,
+    required this.onMenuPressed,
+  });
+
+  final String title;
+  final VoidCallback onBackPressed;
+  final VoidCallback onMenuPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = context.isDark;
+    
+    return ClipRRect(
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+        child: Container(
+          height: 56,
+          decoration: BoxDecoration(
+            color: isDark
+                ? context.cCard.withValues(alpha: 0.4)
+                : context.cCard.withValues(alpha: 0.7),
+            border: Border(
+              bottom: BorderSide(
+                color: context.cBorder.withValues(alpha: isDark ? 0.3 : 0.5),
+                width: isDark ? 0.5 : 1,
+              ),
+            ),
+            boxShadow: !isDark
+                ? [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.05),
+                      blurRadius: 8,
+                      offset: const Offset(0, 2),
+                    ),
+                  ]
+                : null,
+          ),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 8),
+            child: Row(
+              children: [
+                // Menu button (left)
+                Material(
+                  color: Colors.transparent,
+                  child: InkWell(
+                    onTap: onMenuPressed,
+                    borderRadius: BorderRadius.circular(20),
+                    child: Container(
+                      width: 40,
+                      height: 40,
+                      alignment: Alignment.center,
+                      child: Icon(
+                        Icons.sort_sharp,
+                        color: context.cFg.withValues(alpha: 0.9),
+                        size: 24,
+                      ),
+                    ),
+                  ),
+                ),
+                
+                const SizedBox(width: 8),
+                
+                // Title
+                Expanded(
+                  child: Text(
+                    title,
+                    style: TextStyle(
+                      color: context.cFg,
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                      letterSpacing: -0.2,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+                
+                const SizedBox(width: 8),
+                
+                // Back to top button (right)
+                Material(
+                  color: Colors.transparent,
+                  child: InkWell(
+                    onTap: onBackPressed,
+                    borderRadius: BorderRadius.circular(20),
+                    child: Container(
+                      width: 40,
+                      height: 40,
+                      alignment: Alignment.center,
+                      child: Icon(
+                        Icons.arrow_upward_rounded,
+                        color: context.cFg.withValues(alpha: 0.9),
+                        size: 22,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
     );
   }
 }

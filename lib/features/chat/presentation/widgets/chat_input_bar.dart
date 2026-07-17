@@ -1,3 +1,5 @@
+import 'dart:ui';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
@@ -124,17 +126,36 @@ class _ChatInputBarState extends State<ChatInputBar>
         16,
         bottomPad > 0 ? bottomPad + 8 : 16,
       ),
-      child: Container(
-        decoration: BoxDecoration(
-          color: context.cCard.withValues(alpha: 0.4),
-          borderRadius: BorderRadius.circular(28),
-          border: Border.all(
-            color: _isFocused
-                ? context.cBorder.withValues(alpha: 0.55)
-                : context.cBorder.withValues(alpha: 0.3),
-            width: 1,
-          ),
-        ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(28),
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+          child: Container(
+            decoration: BoxDecoration(
+              color: context.isDark
+                  ? context.cCard.withValues(alpha: 0.4)
+                  : context.cCard.withValues(alpha: 0.7),
+              borderRadius: BorderRadius.circular(28),
+              border: Border.all(
+                color: _isFocused
+                    ? context.cBorder.withValues(
+                        alpha: context.isDark ? 0.55 : 0.8,
+                      )
+                    : context.cBorder.withValues(
+                        alpha: context.isDark ? 0.3 : 0.5,
+                      ),
+                width: context.isDark ? 1 : 1.5,
+              ),
+              boxShadow: !context.isDark && _isFocused
+                  ? [
+                      BoxShadow(
+                        color: AppColors.landingPrimary.withValues(alpha: 0.1),
+                        blurRadius: 12,
+                        offset: const Offset(0, 2),
+                      ),
+                    ]
+                  : null,
+            ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -232,6 +253,8 @@ class _ChatInputBarState extends State<ChatInputBar>
               ),
             ),
           ],
+        ),
+          ),
         ),
       ),
     );

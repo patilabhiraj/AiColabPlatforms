@@ -1,3 +1,5 @@
+import 'dart:ui';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../../core/theme/app_colors.dart';
@@ -374,12 +376,30 @@ class _ContinueCard extends StatelessWidget {
       child: InkWell(
         onTap: onTap,
         borderRadius: BorderRadius.circular(18),
-        child: Ink(
-          decoration: BoxDecoration(
-            color: context.cCard.withValues(alpha: isDark ? 0.45 : 0.85),
-            borderRadius: BorderRadius.circular(18),
-            border: Border.all(color: context.cBorder.withValues(alpha: 0.5)),
-          ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(18),
+          child: BackdropFilter(
+            filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
+            child: Ink(
+              decoration: BoxDecoration(
+                color: isDark
+                    ? context.cCard.withValues(alpha: 0.45)
+                    : context.cCard.withValues(alpha: 0.7),
+                borderRadius: BorderRadius.circular(18),
+                border: Border.all(
+                  color: context.cBorder.withValues(alpha: isDark ? 0.5 : 0.7),
+                  width: isDark ? 1 : 1.5,
+                ),
+                boxShadow: !isDark
+                    ? [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.06),
+                          blurRadius: 12,
+                          offset: const Offset(0, 3),
+                        ),
+                      ]
+                    : null,
+              ),
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
             child: Row(
@@ -428,6 +448,8 @@ class _ContinueCard extends StatelessWidget {
                   color: context.cMuted.withValues(alpha: 0.55),
                 ),
               ],
+            ),
+          ),
             ),
           ),
         ),
@@ -502,13 +524,31 @@ class _PromptChip extends StatelessWidget {
       child: InkWell(
         onTap: onTap,
         borderRadius: BorderRadius.circular(16),
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-          decoration: BoxDecoration(
-            color: context.cCard.withValues(alpha: context.isDark ? 0.5 : 0.85),
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: accent.withValues(alpha: 0.3)),
-          ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(16),
+          child: BackdropFilter(
+            filter: ImageFilter.blur(sigmaX: 6, sigmaY: 6),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+              decoration: BoxDecoration(
+                color: context.isDark
+                    ? context.cCard.withValues(alpha: 0.5)
+                    : context.cCard.withValues(alpha: 0.7),
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(
+                  color: accent.withValues(alpha: context.isDark ? 0.3 : 0.4),
+                  width: context.isDark ? 1 : 1.5,
+                ),
+                boxShadow: !context.isDark
+                    ? [
+                        BoxShadow(
+                          color: accent.withValues(alpha: 0.08),
+                          blurRadius: 8,
+                          offset: const Offset(0, 2),
+                        ),
+                      ]
+                    : null,
+              ),
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
@@ -525,6 +565,8 @@ class _PromptChip extends StatelessWidget {
                 ),
               ),
             ],
+          ),
+            ),
           ),
         ),
       ),

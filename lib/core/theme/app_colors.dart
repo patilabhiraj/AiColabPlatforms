@@ -7,7 +7,7 @@ extension AppThemeX on BuildContext {
   Color get cBg     => isDark ? AppColors.darkBackground      : AppColors.lightBackground;
   Color get cFg     => isDark ? AppColors.darkForeground      : AppColors.lightForeground;
   Color get cCard   => isDark ? AppColors.darkCard            : AppColors.lightCard;
-  Color get cBorder => isDark ? AppColors.darkBorder          : const Color(0xFF181824);
+  Color get cBorder => isDark ? AppColors.darkBorder          : AppColors.lightBorder;
   Color get cMuted  => isDark ? AppColors.darkMutedForeground : AppColors.lightMutedForeground;
   Color get cError  => isDark ? AppColors.darkDestructive     : AppColors.lightDestructive;
   Color get cSidebar=> isDark ? AppColors.darkSidebar         : AppColors.lightSidebar;
@@ -29,61 +29,60 @@ abstract final class AppColors {
   static const Color landingPrimaryHover = Color(0xFF530929);
 
   // ─────────────────────────────────────────────────────────────────────────────
-  // LIGHT MODE TOKENS
+  // LIGHT MODE TOKENS - Beautiful & Professional 🎨
   // ─────────────────────────────────────────────────────────────────────────────
 
-  // oklch(1 0 0) → pure white
-  static const Color lightBackground = Color(0xFFFFFFFF);
+  // Light gray-pink background for warmth and contrast
+  static const Color lightBackground = Color(0xFFF7F5F6);
 
-  // oklch(0.141 0.005 285.823) → near-black with cool blue tint
-  static const Color lightForeground = Color(0xFF0F0F13);
+  // Deep rich black for excellent readability
+  static const Color lightForeground = Color(0xFF0D0D0D);
 
-  // oklch(1 0 0) → white
+  // Pure white cards that really pop from the background
   static const Color lightCard = Color(0xFFFFFFFF);
-  static const Color lightCardForeground = Color(0xFF0F0F13);
+  static const Color lightCardForeground = Color(0xFF0D0D0D);
 
-  // oklch(1 0 0) → white
+  // Pure white popovers
   static const Color lightPopover = Color(0xFFFFFFFF);
-  static const Color lightPopoverForeground = Color(0xFF0F0F13);
+  static const Color lightPopoverForeground = Color(0xFF0D0D0D);
 
-  // oklch(0.21 0.006 285.885) → very dark navy/gray
-  static const Color lightPrimary = Color(0xFF1C1C27);
-  // oklch(0.985 0 0) → near white
-  static const Color lightPrimaryForeground = Color(0xFFFAFAFA);
+  // Brand primary color - matches landing page
+  static const Color lightPrimary = landingPrimary;
+  // White text on primary
+  static const Color lightPrimaryForeground = Color(0xFFFFFFFF);
 
-  // oklch(0.967 0.001 286.375) → very light gray
-  static const Color lightSecondary = Color(0xFFF5F5F8);
-  static const Color lightSecondaryForeground = Color(0xFF1C1C27);
+  // Light gray-pink for secondary elements
+  static const Color lightSecondary = Color(0xFFF0EEF0);
+  static const Color lightSecondaryForeground = Color(0xFF0D0D0D);
 
-  // oklch(0.967 0.001 286.375) → very light gray
-  static const Color lightMuted = Color(0xFFF5F5F8);
-  // oklch(0.552 0.016 285.938) → medium gray
-  static const Color lightMutedForeground = Color(0xFF6B6B7B);
+  // Visible muted background
+  static const Color lightMuted = Color(0xFFE8E5E7);
+  // Muted text - still readable
+  static const Color lightMutedForeground = Color(0xFF5A5A5A);
 
-  // oklch(0.967 0.001 286.375) → very light gray
-  static const Color lightAccent = Color(0xFFF5F5F8);
-  static const Color lightAccentForeground = Color(0xFF1C1C27);
+  // Accent - soft pink/purple tint
+  static const Color lightAccent = Color(0xFFFFE8F1);
+  static const Color lightAccentForeground = Color(0xFF0D0D0D);
 
-  // oklch(0.577 0.245 27.325) → vivid red
+  // Destructive red - clearly visible
   static const Color lightDestructive = Color(0xFFDC2626);
 
-  // oklch(0.92 0.004 286.32) → light border gray
-  static const Color lightBorder = Color(0xFFE8E8ED);
-  static const Color lightInput = Color(0xFFE8E8ED);
+  // Borders - clearly visible with warmth
+  static const Color lightBorder = Color(0xFFD4CED1);
+  static const Color lightInput = Color(0xFFD4CED1);
 
-  // oklch(0.705 0.015 286.067) → muted ring/focus
-  static const Color lightRing = Color(0xFF9393A5);
+  // Focus ring - brand color
+  static const Color lightRing = landingPrimary;
 
-  // Sidebar (Light)
-  // oklch(0.985 0 0) → near white
-  static const Color lightSidebar = Color(0xFFFAFAFA);
-  static const Color lightSidebarForeground = Color(0xFF0F0F13);
-  static const Color lightSidebarPrimary = Color(0xFF1C1C27);
-  static const Color lightSidebarPrimaryForeground = Color(0xFFFAFAFA);
-  static const Color lightSidebarAccent = Color(0xFFF5F5F8);
-  static const Color lightSidebarAccentForeground = Color(0xFF1C1C27);
-  static const Color lightSidebarBorder = Color(0xFFE8E8ED);
-  static const Color lightSidebarRing = Color(0xFF9393A5);
+  // Sidebar (Light) - Very light warm gray
+  static const Color lightSidebar = Color(0xFFFBFAFB);
+  static const Color lightSidebarForeground = Color(0xFF0D0D0D);
+  static const Color lightSidebarPrimary = landingPrimary;
+  static const Color lightSidebarPrimaryForeground = Color(0xFFFFFFFF);
+  static const Color lightSidebarAccent = Color(0xFFFFE8F1);
+  static const Color lightSidebarAccentForeground = Color(0xFF0D0D0D);
+  static const Color lightSidebarBorder = Color(0xFFD4CED1);
+  static const Color lightSidebarRing = landingPrimary;
 
   // Charts (Light)
   // oklch(0.646 0.222 41.116) → vivid orange

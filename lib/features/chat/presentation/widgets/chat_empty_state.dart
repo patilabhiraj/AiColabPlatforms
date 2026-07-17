@@ -1,7 +1,7 @@
 import 'dart:ui';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:lottie/lottie.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../auth/bloc/auth_bloc.dart';
 import '../../bloc/chat_bloc.dart';
@@ -58,6 +58,47 @@ class ChatEmptyState extends StatelessWidget {
     final greeting =
         firstName.isNotEmpty ? '${_getGreeting()}, $firstName' : _getGreeting();
 
+    // Recent conversations (top 1 shown, "View all" opens the drawer).
+    final recentList = chatState is ChatLoaded ? chatState.conversations : const <ChatConversation>[];
+
+    const categories = [
+      _CategorySeed('Brainstorm', Icons.psychology_alt_outlined,
+          'Ideas & insights', Color(0xFF8B5CF6)),
+      _CategorySeed('Learn', Icons.school_outlined, 'Explain anything',
+          Color(0xFF10B981)),
+      _CategorySeed('Create', Icons.auto_awesome_rounded, 'Write & design',
+          Color(0xFFF59E0B)),
+      _CategorySeed('Search', Icons.search_rounded, 'Find anything',
+          Color(0xFF3B82F6)),
+    ];
+
+    const defaultPrompts = [
+      _SuggestionSeed(
+        'Give me ideas for a',
+        Icons.auto_awesome_rounded,
+        'weekend project',
+        Color(0xFF8B5CF6),
+      ),
+      _SuggestionSeed(
+        'Explain quantum',
+        Icons.description_outlined,
+        'computing simply',
+        Color(0xFF10B981),
+      ),
+      _SuggestionSeed(
+        'Write a short story',
+        Icons.edit_outlined,
+        'about space travel',
+        Color(0xFFF59E0B),
+      ),
+      _SuggestionSeed(
+        'Help me debug',
+        Icons.code_rounded,
+        'this code',
+        Color(0xFF3B82F6),
+      ),
+    ];
+
     return Container(
       decoration: BoxDecoration(
         gradient: RadialGradient(
@@ -72,13 +113,13 @@ class ChatEmptyState extends StatelessWidget {
         ),
       ),
       child: SingleChildScrollView(
-        padding: const EdgeInsets.fromLTRB(24, 40, 24, 24),
+        padding: const EdgeInsets.fromLTRB(20, 40, 20, 24),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           mainAxisSize: MainAxisSize.min,
           children: [
-            const SizedBox(height: 8),
-            // ── Small labelled greeting (orb + "Good evening, Abhiraj") ──────
+            const SizedBox(height: 78),
+            // ── Small labelled greeting (orb + "Good afternoon, Colab 👋") ────
             _FadeInSlide(
               delay: 150,
               child: Row(
@@ -95,47 +136,178 @@ class ChatEmptyState extends StatelessWidget {
                       ),
                     ),
                   ),
+                  const SizedBox(width: 6),
+                  const Text('👋', style: TextStyle(fontSize: 15)),
                 ],
               ),
             ),
-            const SizedBox(height: 20),
+            const SizedBox(height: 16),
 
-            // ── Bold headline, last line accented ────────────────────────────
+            // ── Headline + mascot ──────────────────────────────────────────────
             _FadeInSlide(
               delay: 300,
-              child: RichText(
-                text: TextSpan(
-                  style: TextStyle(
-                    color: context.cFg,
-                    fontSize: 40,
-                    fontWeight: FontWeight.w800,
-                    height: 1.1,
-                    letterSpacing: -1.0,
-                  ),
-                  children: [
-                    const TextSpan(text: 'What should\nwe figure out\n'),
-                    TextSpan(
-                      text: 'together?',
-                      style: const TextStyle(color: AppColors.landingPrimary),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  Expanded(
+                    child: Stack(
+                      clipBehavior: Clip.none,
+                      children: [
+                        RichText(
+                          text: TextSpan(
+                            style: TextStyle(
+                              color: context.cFg,
+                              fontSize: 32,
+                              fontWeight: FontWeight.w800,
+                              height: 1.15,
+                              letterSpacing: -0.8,
+                            ),
+                            children: [
+                              const TextSpan(text: 'What should\nwe figure out\n'),
+                              TextSpan(
+                                text: 'together?',
+                                style: const TextStyle(
+                                  color: AppColors.landingPrimary,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        Positioned(
+                          left: 0,
+                          bottom: -10,
+                          child: CustomPaint(
+                            size: const Size(88, 10),
+                            painter: _SquigglePainter(
+                              color: AppColors.landingPrimary
+                                  .withValues(alpha: 0.5),
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
-                  ],
+                  ),
+                  const SizedBox(width: 12),
+                  const _MascotOrb(),
+                ],
+              ),
+            ),
+            const SizedBox(height: 28),
+
+            // ── Category pills row ───────────────────────────────────────────
+            _FadeInSlide(
+              delay: 380,
+              child: SizedBox(
+                height: 68,
+                child: ListView.separated(
+                  scrollDirection: Axis.horizontal,
+                  itemCount: categories.length,
+                  separatorBuilder: (_, _) => const SizedBox(width: 10),
+                  itemBuilder: (context, i) => _CategoryPill(
+                    seed: categories[i],
+                    onTap: () => onSuggestion(categories[i].label),
+                  ),
                 ),
               ),
             ),
 
-            // ── Continue card (only when there's a recent chat) ──────────────
+            // ── Recent conversations ─────────────────────────────────────────
             if (recent != null) ...[
-              const SizedBox(height: 48),
+              const SizedBox(height: 24),
               _FadeInSlide(
-                delay: 450,
-                child: _ContinueCard(
-                  conversation: recent,
-                  onTap: () => context
-                      .read<ChatBloc>()
-                      .add(ChatSelectConversation(recent)),
+                delay: 440,
+                child: Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: context.isDark
+                        ? context.cCard.withValues(alpha: 0.35)
+                        : context.cCard.withValues(alpha: 0.55),
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(
+                      color: context.cBorder.withValues(alpha: 0.3),
+                    ),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            'Recent conversations',
+                            style: TextStyle(
+                              color: context.cFg,
+                              fontSize: 15,
+                              fontWeight: FontWeight.w700,
+                              letterSpacing: -0.2,
+                            ),
+                          ),
+                          if (recentList.length > 1)
+                            GestureDetector(
+                              onTap: () => Scaffold.of(context).openDrawer(),
+                              child: const Text(
+                                'View all',
+                                style: TextStyle(
+                                  color: AppColors.landingPrimary,
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
+                      _ContinueCard(
+                        conversation: recent,
+                        onTap: () => context
+                            .read<ChatBloc>()
+                            .add(ChatSelectConversation(recent)),
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ],
+
+            // ── Suggestion cards to fill the space & invite a first message ──
+            const SizedBox(height: 28),
+            _FadeInSlide(
+              delay: 500,
+              child: Text(
+                'Try asking something',
+                style: TextStyle(
+                  color: context.cFg.withValues(alpha: 0.85),
+                  fontSize: 15,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: -0.2,
+                ),
+              ),
+            ),
+            const SizedBox(height: 12),
+            _FadeInSlide(
+              delay: 550,
+              child: LayoutBuilder(
+                builder: (context, constraints) {
+                  const gap = 10.0;
+                  final cardWidth = (constraints.maxWidth - gap) / 2;
+                  return Wrap(
+                    spacing: gap,
+                    runSpacing: gap,
+                    children: [
+                      for (final seed in defaultPrompts)
+                        SizedBox(
+                          width: cardWidth,
+                          child: _SuggestionCard(
+                            seed: seed,
+                            onTap: () =>
+                                onSuggestion('${seed.title} ${seed.subtitle}'),
+                          ),
+                        ),
+                    ],
+                  );
+                },
+              ),
+            ),
           ],
         ),
       ),
@@ -574,5 +746,272 @@ class _PromptChip extends StatelessWidget {
   }
 }
 
+// ── Default suggestion seed data ──────────────────────────────────────────────
+class _SuggestionSeed {
+  const _SuggestionSeed(this.title, this.icon, this.subtitle, this.color);
+  final String title;
+  final IconData icon;
+  final String subtitle;
+  final Color color;
+}
+
+// ── Category seed data (Brainstorm / Learn / Create / Search) ────────────────
+class _CategorySeed {
+  const _CategorySeed(this.label, this.icon, this.subtitle, this.color);
+  final String label;
+  final IconData icon;
+  final String subtitle;
+  final Color color;
+}
+
+// ── Default suggestion card (2-column grid, matches reference) ───────────────
+class _SuggestionCard extends StatelessWidget {
+  const _SuggestionCard({required this.seed, required this.onTap});
+
+  final _SuggestionSeed seed;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = context.isDark;
+
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(18),
+        child: Container(
+          padding: const EdgeInsets.all(14),
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                seed.color.withValues(alpha: isDark ? 0.16 : 0.10),
+                seed.color.withValues(alpha: isDark ? 0.06 : 0.03),
+              ],
+            ),
+            borderRadius: BorderRadius.circular(18),
+            border: Border.all(
+              color: seed.color.withValues(alpha: isDark ? 0.28 : 0.20),
+            ),
+          ),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Container(
+                      width: 40,
+                      height: 40,
+                      decoration: BoxDecoration(
+                        color: seed.color.withValues(alpha: isDark ? 0.22 : 0.15),
+                        borderRadius: BorderRadius.circular(13),
+                      ),
+                      child: Icon(seed.icon, size: 20, color: seed.color),
+                    ),
+                    const SizedBox(height: 12),
+                    Text(
+                      '${seed.title}\n${seed.subtitle}',
+                      maxLines: 2,
+                      style: TextStyle(
+                        color: context.cFg,
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        height: 1.3,
+                        letterSpacing: -0.2,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.only(top: 2),
+                child: Icon(
+                  Icons.chevron_right_rounded,
+                  size: 18,
+                  color: context.cMuted.withValues(alpha: 0.55),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ── Category pill (horizontal scroller under the headline) ───────────────────
+class _CategoryPill extends StatelessWidget {
+  const _CategoryPill({required this.seed, required this.onTap});
+
+  final _CategorySeed seed;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = context.isDark;
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(16),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+          decoration: BoxDecoration(
+            color: isDark
+                ? context.cCard.withValues(alpha: 0.4)
+                : context.cCard.withValues(alpha: 0.65),
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(
+              color: context.cBorder.withValues(alpha: 0.3),
+            ),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 34,
+                height: 34,
+                decoration: BoxDecoration(
+                  color: seed.color.withValues(alpha: 0.15),
+                  borderRadius: BorderRadius.circular(11),
+                ),
+                child: Icon(seed.icon, size: 18, color: seed.color),
+              ),
+              const SizedBox(width: 10),
+              Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    seed.label,
+                    style: TextStyle(
+                      color: context.cFg,
+                      fontSize: 13.5,
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: -0.2,
+                    ),
+                  ),
+                  const SizedBox(height: 1),
+                  Text(
+                    seed.subtitle,
+                    style: TextStyle(
+                      color: context.cMuted.withValues(alpha: 0.75),
+                      fontSize: 11,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(width: 4),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ── Mascot (AI assistant Lottie animation) ───────────────────────────────────
+/// A friendly, self-animating AI assistant rendered from a Lottie file, sitting
+/// inside a soft breathing glow that ties it to the brand colour.
+class _MascotOrb extends StatefulWidget {
+  const _MascotOrb();
+
+  @override
+  State<_MascotOrb> createState() => _MascotOrbState();
+}
+
+class _MascotOrbState extends State<_MascotOrb>
+    with SingleTickerProviderStateMixin {
+  // Drives only the soft glow halo; the Lottie file animates on its own.
+  late final AnimationController _glow = AnimationController(
+    vsync: this,
+    duration: const Duration(seconds: 3),
+  )..repeat(reverse: true);
+
+  @override
+  void dispose() {
+    _glow.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    const primary = AppColors.landingPrimary;
+    return AnimatedBuilder(
+      animation: _glow,
+      builder: (context, child) {
+        final t = Curves.easeInOut.transform(_glow.value);
+        return Container(
+          width: 116,
+          height: 116,
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            gradient: RadialGradient(
+              colors: [
+                primary.withValues(alpha: 0.12 + t * 0.12),
+                primary.withValues(alpha: 0.0),
+              ],
+            ),
+          ),
+          child: child,
+        );
+      },
+      child: Lottie.asset(
+        'assets/animations/ai_assistant.json',
+        width: 104,
+        height: 104,
+        fit: BoxFit.contain,
+        // If the asset ever fails to load, fall back to a simple sparkle
+        // so the layout never breaks.
+        errorBuilder: (context, error, stack) => const Icon(
+          Icons.auto_awesome_rounded,
+          size: 44,
+          color: primary,
+        ),
+      ),
+    );
+  }
+}
+
+// ── Squiggle underline under the headline ────────────────────────────────────
+class _SquigglePainter extends CustomPainter {
+  const _SquigglePainter({required this.color});
+  final Color color;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = color
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 3
+      ..strokeCap = StrokeCap.round;
+
+    final path = Path();
+    final waves = 4;
+    final segment = size.width / waves;
+    path.moveTo(0, size.height / 2);
+    for (var i = 0; i < waves; i++) {
+      final startX = i * segment;
+      final midX = startX + segment / 2;
+      final endX = startX + segment;
+      final dir = i.isEven ? -1.0 : 1.0;
+      path.quadraticBezierTo(
+        midX,
+        size.height / 2 + dir * (size.height / 2),
+        endX,
+        size.height / 2,
+      );
+    }
+    canvas.drawPath(path, paint);
+  }
+
+  @override
+  bool shouldRepaint(_SquigglePainter old) => old.color != color;
+}
 
 

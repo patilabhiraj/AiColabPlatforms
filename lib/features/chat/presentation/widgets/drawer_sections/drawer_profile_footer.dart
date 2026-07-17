@@ -103,8 +103,8 @@ class DrawerProfileFooter extends StatelessWidget {
                   children: [
                     Text(
                       displayName,
-                      style: const TextStyle(
-                        color: AppColors.darkForeground,
+                      style: TextStyle(
+                        color: context.cFg,
                         fontSize: 15,
                         fontWeight: FontWeight.w600,
                       ),
@@ -115,7 +115,7 @@ class DrawerProfileFooter extends StatelessWidget {
                     Text(
                       displayEmail,
                       style: TextStyle(
-                        color: AppColors.darkMutedForeground.withValues(alpha: 0.7),
+                        color: context.cMuted.withValues(alpha: 0.7),
                         fontSize: 13,
                       ),
                       maxLines: 1,
@@ -152,7 +152,7 @@ class DrawerProfileFooter extends StatelessWidget {
                 onPressed: () => _showProfileOptions(context),
                 icon: Icon(
                   Icons.more_horiz_rounded,
-                  color: AppColors.darkMutedForeground.withValues(alpha: 0.7),
+                  color: context.cMuted.withValues(alpha: 0.7),
                   size: 22,
                 ),
                 padding: EdgeInsets.zero,
@@ -168,11 +168,11 @@ class DrawerProfileFooter extends StatelessWidget {
   void _showProfileOptions(BuildContext context) {
     showModalBottomSheet(
       context: context,
-      backgroundColor: AppColors.darkCard,
+      backgroundColor: context.cCard,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
       ),
-      builder: (context) => SafeArea(
+      builder: (sheetContext) => SafeArea(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -185,10 +185,10 @@ class DrawerProfileFooter extends StatelessWidget {
             //   },
             // ),
             ListTile(
-              leading: const Icon(Icons.settings_outlined, color: AppColors.darkForeground),
-              title: const Text('Settings', style: TextStyle(color: AppColors.darkForeground)),
+              leading: Icon(Icons.settings_outlined, color: sheetContext.cFg),
+              title: Text('Settings', style: TextStyle(color: sheetContext.cFg)),
               onTap: () {
-                Navigator.pop(context);
+                Navigator.pop(sheetContext);
                 Navigator.of(context).push(
                   MaterialPageRoute(builder: (_) => const SettingsHubPage()),
                 );
@@ -221,12 +221,12 @@ class DrawerProfileFooter extends StatelessWidget {
                 // );
             //   },
             // ),
-            const Divider(color: AppColors.darkBorder, height: 1),
+            Divider(color: sheetContext.cBorder, height: 1),
             ListTile(
               leading: const Icon(Icons.logout_rounded, color: Colors.red),
               title: const Text('Logout', style: TextStyle(color: Colors.red)),
               onTap: () {
-                Navigator.pop(context);
+                Navigator.pop(sheetContext);
                 logger.info('🚪 Logout button clicked');
                 context.read<AuthBloc>().add(AuthLogoutRequested());
               },

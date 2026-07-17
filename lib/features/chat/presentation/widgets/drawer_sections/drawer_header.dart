@@ -34,10 +34,10 @@ class ChatDrawerHeader extends StatelessWidget {
             ),
           ),
           const SizedBox(width: 12),
-          const Text(
+          Text(
             'COLAB',
             style: TextStyle(
-              color: Colors.white,
+              color: context.cFg,
               fontSize: 18,
               fontWeight: FontWeight.w700,
               letterSpacing: 1.5,
@@ -47,9 +47,9 @@ class ChatDrawerHeader extends StatelessWidget {
           // Close button
           IconButton(
             onPressed: onClose,
-            icon: const Icon(
+            icon: Icon(
               Icons.close_rounded,
-              color: AppColors.darkMutedForeground,
+              color: context.cMuted,
               size: 24,
             ),
             padding: EdgeInsets.zero,

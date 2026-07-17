@@ -105,7 +105,7 @@ class _ChatDrawerState extends State<ChatDrawer> {
             ),
 
             // Profile footer
-            const Divider(color: AppColors.darkBorder, height: 1),
+            Divider(color: context.cBorder, height: 1),
             const DrawerProfileFooter(),
           ],
         ),
@@ -130,9 +130,10 @@ class _NewChatButton extends StatelessWidget {
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
           decoration: BoxDecoration(
+            color: context.cCard.withValues(alpha: context.isDark ? 0 : 1),
             borderRadius: BorderRadius.circular(8),
             border: Border.all(
-              color: AppColors.darkBorder.withValues(alpha: 0.6),
+              color: context.cBorder.withValues(alpha: context.isDark ? 0.6 : 0.9),
               width: 1,
             ),
           ),
@@ -141,13 +142,13 @@ class _NewChatButton extends StatelessWidget {
               Icon(
                 Icons.add_rounded,
                 size: 20,
-                color: AppColors.darkForeground.withValues(alpha: 0.9),
+                color: context.cFg.withValues(alpha: 0.9),
               ),
               const SizedBox(width: 10),
               Text(
                 'New Chat',
                 style: TextStyle(
-                  color: AppColors.darkForeground.withValues(alpha: 0.9),
+                  color: context.cFg.withValues(alpha: 0.9),
                   fontSize: 15,
                   fontWeight: FontWeight.w500,
                 ),

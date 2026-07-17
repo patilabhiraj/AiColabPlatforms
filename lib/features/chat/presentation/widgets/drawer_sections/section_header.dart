@@ -27,7 +27,7 @@ class SectionHeader extends StatelessWidget {
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(8),
             border: Border.all(
-              color: AppColors.darkBorder.withValues(alpha: 0.4),
+              color: context.cBorder.withValues(alpha: context.isDark ? 0.4 : 0.7),
               width: 1,
             ),
           ),
@@ -37,7 +37,7 @@ class SectionHeader extends StatelessWidget {
                 child: Text(
                   title,
                   style: TextStyle(
-                    color: AppColors.darkMutedForeground.withValues(alpha: 0.8),
+                    color: context.cMuted.withValues(alpha: 0.9),
                     fontSize: 12,
                     fontWeight: FontWeight.w700,
                     letterSpacing: 1.2,

@@ -31,7 +31,7 @@ class ChatsSection extends StatelessWidget {
             trailing: Icon(
               isExpanded ? Icons.keyboard_arrow_down_rounded : Icons.keyboard_arrow_right_rounded,
               size: 20,
-              color: AppColors.darkMutedForeground.withValues(alpha: 0.6),
+              color: context.cMuted.withValues(alpha: 0.6),
             ),
           ),
           if (isExpanded) ...[
@@ -48,7 +48,7 @@ class ChatsSection extends StatelessWidget {
                     child: Text(
                       'No chats yet',
                       style: TextStyle(
-                        color: AppColors.darkMutedForeground.withValues(alpha: 0.6),
+                        color: context.cMuted.withValues(alpha: 0.6),
                         fontSize: 14,
                       ),
                     ),
@@ -90,7 +90,7 @@ class ChatsSection extends StatelessWidget {
                               Text(
                                 'Starred Messages',
                                 style: TextStyle(
-                                  color: AppColors.darkForeground.withValues(alpha: 0.85),
+                                  color: context.cFg.withValues(alpha: 0.85),
                                   fontSize: 15,
                                   fontWeight: FontWeight.w500,
                                 ),
@@ -163,30 +163,30 @@ class ChatsSection extends StatelessWidget {
   void _showChatOptions(BuildContext context, ChatConversation conversation) {
     showModalBottomSheet(
       context: context,
-      backgroundColor: AppColors.darkCard,
+      backgroundColor: context.cCard,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
       ),
-      builder: (context) => SafeArea(
+      builder: (sheetContext) => SafeArea(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             ListTile(
-              leading: const Icon(Icons.edit_outlined, color: AppColors.darkForeground),
-              title: const Text('Rename', style: TextStyle(color: AppColors.darkForeground)),
-              onTap: () => Navigator.pop(context),
+              leading: Icon(Icons.edit_outlined, color: sheetContext.cFg),
+              title: Text('Rename', style: TextStyle(color: sheetContext.cFg)),
+              onTap: () => Navigator.pop(sheetContext),
             ),
             ListTile(
-              leading: const Icon(Icons.star_outline_rounded, color: AppColors.darkForeground),
-              title: const Text('Star', style: TextStyle(color: AppColors.darkForeground)),
-              onTap: () => Navigator.pop(context),
+              leading: Icon(Icons.star_outline_rounded, color: sheetContext.cFg),
+              title: Text('Star', style: TextStyle(color: sheetContext.cFg)),
+              onTap: () => Navigator.pop(sheetContext),
             ),
             ListTile(
               leading: const Icon(Icons.delete_outline_rounded, color: Colors.red),
               title: const Text('Delete', style: TextStyle(color: Colors.red)),
               onTap: () {
                 context.read<ChatBloc>().add(ChatDeleteConversation(conversation.id));
-                Navigator.pop(context);
+                Navigator.pop(sheetContext);
               },
             ),
           ],
@@ -212,8 +212,8 @@ class _ChatItem extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: isSelected 
-          ? AppColors.darkCard.withValues(alpha: 0.3)
+      color: isSelected
+          ? context.cCard.withValues(alpha: context.isDark ? 0.3 : 1)
           : Colors.transparent,
       borderRadius: BorderRadius.circular(8),
       child: InkWell(
@@ -226,14 +226,14 @@ class _ChatItem extends StatelessWidget {
               Icon(
                 Icons.chat_bubble_outline_rounded,
                 size: 18,
-                color: AppColors.darkMutedForeground.withValues(alpha: 0.7),
+                color: context.cMuted.withValues(alpha: 0.7),
               ),
               const SizedBox(width: 12),
               Expanded(
                 child: Text(
                   title,
                   style: TextStyle(
-                    color: AppColors.darkForeground.withValues(alpha: 0.85),
+                    color: context.cFg.withValues(alpha: 0.85),
                     fontSize: 15,
                     fontWeight: FontWeight.w400,
                   ),
@@ -248,7 +248,7 @@ class _ChatItem extends StatelessWidget {
                   child: Icon(
                     Icons.more_horiz_rounded,
                     size: 18,
-                    color: AppColors.darkMutedForeground.withValues(alpha: 0.6),
+                    color: context.cMuted.withValues(alpha: 0.6),
                   ),
                 ),
               ),
@@ -282,13 +282,13 @@ class _LoadMoreButton extends StatelessWidget {
                     height: 16,
                     child: CircularProgressIndicator(
                       strokeWidth: 2,
-                      color: AppColors.darkMutedForeground.withValues(alpha: 0.7),
+                      color: context.cMuted.withValues(alpha: 0.7),
                     ),
                   )
                 : Text(
                     'Load More Chats',
                     style: TextStyle(
-                      color: AppColors.darkMutedForeground.withValues(alpha: 0.7),
+                      color: context.cMuted.withValues(alpha: 0.7),
                       fontSize: 14,
                       fontWeight: FontWeight.w500,
                     ),

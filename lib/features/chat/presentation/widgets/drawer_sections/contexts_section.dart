@@ -28,13 +28,13 @@ class ContextsSection extends StatelessWidget {
                 Icon(
                   Icons.add_rounded,
                   size: 18,
-                  color: AppColors.darkMutedForeground.withValues(alpha: 0.6),
+                  color: context.cMuted.withValues(alpha: 0.6),
                 ),
                 const SizedBox(width: 8),
                 Icon(
                   isExpanded ? Icons.keyboard_arrow_down_rounded : Icons.keyboard_arrow_right_rounded,
                   size: 20,
-                  color: AppColors.darkMutedForeground.withValues(alpha: 0.6),
+                  color: context.cMuted.withValues(alpha: 0.6),
                 ),
               ],
             ),
@@ -83,10 +83,10 @@ class _ContextItem extends StatelessWidget {
                 height: 18,
                 decoration: BoxDecoration(
                   color: isChecked 
-                      ? AppColors.darkMutedForeground.withValues(alpha: 0.3)
+                      ? context.cMuted.withValues(alpha: 0.3)
                       : Colors.transparent,
                   border: Border.all(
-                    color: AppColors.darkMutedForeground.withValues(alpha: 0.5),
+                    color: context.cMuted.withValues(alpha: 0.5),
                     width: 1.5,
                   ),
                   borderRadius: BorderRadius.circular(4),
@@ -95,7 +95,7 @@ class _ContextItem extends StatelessWidget {
                     ? Icon(
                         Icons.check_rounded,
                         size: 14,
-                        color: AppColors.darkForeground.withValues(alpha: 0.9),
+                        color: context.cFg.withValues(alpha: 0.9),
                       )
                     : null,
               ),
@@ -104,7 +104,7 @@ class _ContextItem extends StatelessWidget {
                 child: Text(
                   title,
                   style: TextStyle(
-                    color: AppColors.darkForeground.withValues(alpha: 0.85),
+                    color: context.cFg.withValues(alpha: 0.85),
                     fontSize: 15,
                     fontWeight: FontWeight.w400,
                   ),
@@ -117,7 +117,7 @@ class _ContextItem extends StatelessWidget {
                   child: Icon(
                     Icons.more_horiz_rounded,
                     size: 18,
-                    color: AppColors.darkMutedForeground.withValues(alpha: 0.6),
+                    color: context.cMuted.withValues(alpha: 0.6),
                   ),
                 ),
               ),

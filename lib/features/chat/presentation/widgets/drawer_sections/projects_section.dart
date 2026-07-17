@@ -28,13 +28,13 @@ class ProjectsSection extends StatelessWidget {
                 Icon(
                   Icons.folder_open_outlined,
                   size: 18,
-                  color: AppColors.darkMutedForeground.withValues(alpha: 0.6),
+                  color: context.cMuted.withValues(alpha: 0.6),
                 ),
                 const SizedBox(width: 8),
                 Icon(
                   isExpanded ? Icons.keyboard_arrow_down_rounded : Icons.keyboard_arrow_right_rounded,
                   size: 20,
-                  color: AppColors.darkMutedForeground.withValues(alpha: 0.6),
+                  color: context.cMuted.withValues(alpha: 0.6),
                 ),
               ],
             ),
@@ -81,14 +81,14 @@ class _ProjectItem extends StatelessWidget {
               Icon(
                 icon,
                 size: 18,
-                color: AppColors.darkMutedForeground.withValues(alpha: 0.7),
+                color: context.cMuted.withValues(alpha: 0.7),
               ),
               const SizedBox(width: 12),
               Expanded(
                 child: Text(
                   title,
                   style: TextStyle(
-                    color: AppColors.darkForeground.withValues(alpha: 0.85),
+                    color: context.cFg.withValues(alpha: 0.85),
                     fontSize: 15,
                     fontWeight: FontWeight.w400,
                   ),
@@ -97,7 +97,7 @@ class _ProjectItem extends StatelessWidget {
               Icon(
                 Icons.chevron_right_rounded,
                 size: 18,
-                color: AppColors.darkMutedForeground.withValues(alpha: 0.5),
+                color: context.cMuted.withValues(alpha: 0.5),
               ),
               const SizedBox(width: 4),
               GestureDetector(
@@ -107,7 +107,7 @@ class _ProjectItem extends StatelessWidget {
                   child: Icon(
                     Icons.more_horiz_rounded,
                     size: 18,
-                    color: AppColors.darkMutedForeground.withValues(alpha: 0.6),
+                    color: context.cMuted.withValues(alpha: 0.6),
                   ),
                 ),
               ),

@@ -197,33 +197,45 @@ class _ChatInputBarState extends State<ChatInputBar>
               padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
               child: Row(
                 children: [
-                  // "+" menu (attach / capabilities / models)
-                  _IconButton(
-                    icon: Icons.add_rounded,
-                    onTap: widget.enabled ? _openComposerMenu : null,
-                  ),
-                  // const SizedBox(width: 4),
+                  // Left cluster scrolls horizontally instead of pushing the
+                  // send button off-screen when Multi mode + Enhance are
+                  // both showing and the composer is narrow.
+                  Expanded(
+                    child: SingleChildScrollView(
+                      scrollDirection: Axis.horizontal,
+                      child: Row(
+                        children: [
+                          // "+" menu (attach / capabilities / models)
+                          _IconButton(
+                            icon: Icons.add_rounded,
+                            onTap: widget.enabled ? _openComposerMenu : null,
+                          ),
 
-                  // Single / Multi toggle
-                  const _ModeToggle(),
-                  const SizedBox(width: 8),
+                          // Single / Multi toggle
+                          const _ModeToggle(),
+                          const SizedBox(width: 8),
 
-                  // Stacked avatars of the selected models (multi mode) —
-                  // tap to open the model picker.
-                  _SelectedModelsBadge(
-                    onTap: widget.enabled ? _openComposerMenu : null,
-                  ),
+                          // Stacked avatars of the selected models (multi
+                          // mode) — tap to open the model picker.
+                          _SelectedModelsBadge(
+                            onTap: widget.enabled ? _openComposerMenu : null,
+                          ),
 
-                  const Spacer(),
-                  // Enhance prompt — only shown once the user has typed a draft.
-                  if (_hasText) ...[
-                    _EnhanceButton(
-                      isEnhancing: _isEnhancing,
-                      onTap: widget.enabled ? _enhance : null,
+                          // Enhance prompt — only shown once the user has
+                          // typed a draft.
+                          if (_hasText) ...[
+                            const SizedBox(width: 8),
+                            _EnhanceButton(
+                              isEnhancing: _isEnhancing,
+                              onTap: widget.enabled ? _enhance : null,
+                            ),
+                          ],
+                        ],
+                      ),
                     ),
-                    const SizedBox(width: 4),
-                  ],
-                  // Voice / Send button
+                  ),
+                  const SizedBox(width: 8),
+                  // Voice / Send button — always fixed at the trailing edge.
                   if (!_hasText)
                     _IconButton(
                       icon: Icons.graphic_eq_rounded,
@@ -915,17 +927,17 @@ class _EnhanceButton extends StatelessWidget {
                 size: 15,
                 color: enabled ? accent : context.cMuted.withValues(alpha: 0.5),
               ),
-            const SizedBox(width: 5),
-            Text(
-              'Enhance',
-              style: TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.w600,
-                color: enabled
-                    ? context.cFg
-                    : context.cMuted.withValues(alpha: 0.5),
-              ),
-            ),
+            // const SizedBox(width: 5),
+            // Text(
+            //   'Enhance',
+            //   style: TextStyle(
+            //     fontSize: 12,
+            //     fontWeight: FontWeight.w600,
+            //     color: enabled
+            //         ? context.cFg
+            //         : context.cMuted.withValues(alpha: 0.5),
+            //   ),
+            // ),
           ],
         ),
       ),

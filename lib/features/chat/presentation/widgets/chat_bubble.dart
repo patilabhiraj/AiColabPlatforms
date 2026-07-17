@@ -252,7 +252,11 @@ class _AiBubble extends StatelessWidget {
                                     backgroundColor: context.isDark
                                         ? card.withValues(alpha: 0.5)
                                         : AppColors.lightMuted,
-                                    color: AppColors.landingPrimary,
+                                    // Dark maroon reads poorly on the dark card,
+                                    // so use a lighter pink there.
+                                    color: context.isDark
+                                        ? const Color(0xFFFF6FA5)
+                                        : AppColors.landingPrimary,
                                     fontSize: 14,
                                   ),
                                   codeblockDecoration: BoxDecoration(

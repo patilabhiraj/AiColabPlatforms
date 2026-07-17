@@ -14,10 +14,11 @@ class DrawerSearchBar extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
       decoration: BoxDecoration(
-        color: Colors.black,
+        // Sit a hair above the sidebar surface in both themes.
+        color: context.cCard.withValues(alpha: context.isDark ? 0.6 : 1),
         borderRadius: BorderRadius.circular(8),
         border: Border.all(
-          color: AppColors.darkBorder.withValues(alpha: 0.4),
+          color: context.cBorder.withValues(alpha: context.isDark ? 0.4 : 0.8),
           width: 1,
         ),
       ),
@@ -26,20 +27,20 @@ class DrawerSearchBar extends StatelessWidget {
           Icon(
             Icons.search_rounded,
             size: 20,
-            color: AppColors.darkMutedForeground.withValues(alpha: 0.6),
+            color: context.cMuted.withValues(alpha: 0.7),
           ),
           const SizedBox(width: 10),
           Expanded(
             child: TextField(
               controller: controller,
               style: TextStyle(
-                color: AppColors.darkForeground.withValues(alpha: 0.9),
+                color: context.cFg.withValues(alpha: 0.9),
                 fontSize: 15,
               ),
               decoration: InputDecoration(
                 hintText: 'Search chats...',
                 hintStyle: TextStyle(
-                  color: AppColors.darkMutedForeground.withValues(alpha: 0.5),
+                  color: context.cMuted.withValues(alpha: 0.6),
                   fontSize: 15,
                 ),
                 border: InputBorder.none,

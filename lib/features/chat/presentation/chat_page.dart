@@ -10,6 +10,7 @@ import '../bloc/chat_bloc.dart';
 import 'widgets/chat_bubble.dart';
 import 'widgets/chat_drawer.dart';
 import 'widgets/chat_empty_state.dart';
+import 'widgets/chat_error_banner.dart';
 import 'widgets/chat_input_bar.dart';
 
 class ChatPage extends StatefulWidget {
@@ -278,6 +279,13 @@ class _ChatPageState extends State<ChatPage> {
                                       chatId: state.selectedConversation?.id,
                                     ),
                             ),
+                            if (state.sendError != null)
+                              ChatErrorBanner(
+                                message: state.sendError!,
+                                onDismiss: () => context
+                                    .read<ChatBloc>()
+                                    .add(ChatClearSendError()),
+                              ),
                             ChatInputBar(
                               enabled: !state.isSending && !state.isStreaming,
                               onSend: (text) => context.read<ChatBloc>().add(

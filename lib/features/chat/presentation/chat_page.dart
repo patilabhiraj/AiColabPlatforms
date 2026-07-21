@@ -23,12 +23,7 @@ class ChatPage extends StatefulWidget {
 class _ChatPageState extends State<ChatPage> {
   final _scrollCtrl = ScrollController();
   bool _isStreaming = false;
-  bool _showAppBar = false;
-  
-  // Progressive blur and opacity values (ChatGPT iOS behavior)
-  double _headerBlur = 0.0;      // Starts at 0, increases to 15 as you scroll
-  double _headerOpacity = 0.0;   // Starts at 0, increases to 0.85 as you scroll
-  
+
   bool _userScrolledAway = false;
   bool _awaitingConversationLoad = false;
 
@@ -49,37 +44,7 @@ class _ChatPageState extends State<ChatPage> {
 
   void _onScroll() {
     if (!_scrollCtrl.hasClients) return;
-    
-    final offset = _scrollCtrl.offset;
-    
-    // ═══════════════════════════════════════════════════════════════════════
-    // CHATGPT iOS EXACT VALUES (Pixel-Perfect Recreation)
-    // ═══════════════════════════════════════════════════════════════════════
-    // ChatGPT uses VERY subtle opacity (8-15% max) with STRONG blur (20-30σ)
-    // This creates the iconic "barely there" glass effect
-    // ═══════════════════════════════════════════════════════════════════════
-    
-    // STRONG blur: 0σ → 30σ (ChatGPT uses heavy blur for glass effect)
-    // Every 4px of scroll adds 1σ (reaches max at 120px)
-    final newBlur = (offset / 4).clamp(0.0, 30.0);
-    
-    // VERY LOW opacity: 0% → 12% (ChatGPT is extremely subtle)
-    // This is the key - barely visible background, strong blur
-    final newOpacity = (offset / 1000).clamp(0.0, 0.12);
-    
-    // Show header after minimal scroll (30px)
-    final shouldShow = offset > 30;
-    
-    // Performance: Only update when change is noticeable
-    if ((newBlur - _headerBlur).abs() > 0.5 || shouldShow != _showAppBar) {
-      setState(() {
-        _headerBlur = newBlur;
-        _headerOpacity = newOpacity;
-        _showAppBar = shouldShow;
-      });
-    }
-    
-    // Existing auto-scroll detection (unchanged)
+
     final distanceFromBottom =
         _scrollCtrl.position.maxScrollExtent - _scrollCtrl.position.pixels;
     final nearBottom = distanceFromBottom <= _bottomThreshold;
@@ -302,6 +267,36 @@ class _ChatPageState extends State<ChatPage> {
             ),
             
             // ═══════════════════════════════════════════════════════════════
+            // TOP FADE - blurs only the status bar strip (time/battery/signal
+            // row), tapering smoothly within that strip instead of a hard edge.
+            // ═══════════════════════════════════════════════════════════════
+            Positioned(
+              top: 0,
+              left: 0,
+              right: 0,
+              height: MediaQuery.of(context).padding.top,
+              child: IgnorePointer(
+                child: ClipRect(
+                  child: BackdropFilter(
+                    filter: ImageFilter.blur(sigmaX: 5, sigmaY: 5),
+                    child: Container(
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment.topCenter,
+                          end: Alignment.bottomCenter,
+                          colors: [
+                            context.cBg.withValues(alpha: 0.3),
+                            context.cBg.withValues(alpha: 0.0),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+
+            // ═══════════════════════════════════════════════════════════════
             // FLOATING ACTION BUTTONS - Always visible (menu + add/profile)
             // These are the ONLY permanently visible elements, NOT a header bar
             // Positioned at top corners, matching ChatGPT iOS exactly
@@ -315,70 +310,7 @@ class _ChatPageState extends State<ChatPage> {
                 child: const _FloatingHeaderButtons(),
               ),
             ),
-            
-            // ═══════════════════════════════════════════════════════════════
-            // FLOATING GLASS CIRCLES - ChatGPT iOS Exact
-            // ═══════════════════════════════════════════════════════════════
-            // NO full-width glass bar! Each button is an individual glass circle
-            // Messages are visible BETWEEN the circles
-            // Left: Menu button (floating glass circle)
-            // Right: Edit + More buttons (floating glass circles)
-            // ═══════════════════════════════════════════════════════════════
-            if (_showAppBar)
-              Positioned(
-                top: 0,
-                left: 0,
-                right: 0,
-                child: SafeArea(
-                  bottom: false,
-                  child: AnimatedOpacity(
-                    opacity: _showAppBar ? 1.0 : 0.0,
-                    duration: const Duration(milliseconds: 200),
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 16,
-                        vertical: 12,
-                      ),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          // LEFT: Menu button (individual glass circle)
-                          _GlassCircleButton(
-                            icon: Icons.menu_rounded,
-                            blurAmount: _headerBlur,
-                            opacity: _headerOpacity,
-                            onTap: () => Scaffold.of(context).openDrawer(),
-                          ),
 
-                          // RIGHT: Action buttons (individual glass circles)
-                          Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              _GlassCircleButton(
-                                icon: Icons.edit_outlined,
-                                blurAmount: _headerBlur,
-                                opacity: _headerOpacity,
-                                onTap: () => context.read<ChatBloc>().add(
-                                  ChatStartNewConversation(),
-                                ),
-                              ),
-                              const SizedBox(width: 8),
-                              _GlassCircleButton(
-                                icon: Icons.more_horiz_rounded,
-                                blurAmount: _headerBlur,
-                                opacity: _headerOpacity,
-                                onTap: () {
-                                  // TODO: Open more menu
-                                },
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-              ),
           ],
         ),
       ),
@@ -783,75 +715,6 @@ class _MessagesList extends StatelessWidget {
 // - Shape: ClipOval (perfect circle)
 // - Blur: BackdropFilter(sigmaX: 20, sigmaY: 20)
 // - Opacity: Dark mode (white @ 8%), Light mode (white @ 25%)
-// - Border: <5% opacity (nearly invisible)
-// - NO shadow, NO elevation
-// - Messages are visible BETWEEN the circles (no connecting background)
-//
-// PROGRESSIVE ANIMATION:
-// - Blur animates from 0σ → 30σ as user scrolls
-// - Opacity animates from 0% → 12% as user scrolls
-// - Smooth transition using AnimatedContainer
-// ══════════════════════════════════════════════════════════════════════════════
-class _GlassCircleButton extends StatelessWidget {
-  const _GlassCircleButton({
-    required this.icon,
-    required this.blurAmount,
-    required this.opacity,
-    required this.onTap,
-  });
-
-  final IconData icon;
-  final double blurAmount;   // Progressive: 0-30σ
-  final double opacity;      // Progressive: 0-0.12
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final isDark = context.isDark;
-    
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(24),  // Half of 48px for perfect circle
-        child: ClipOval(
-          child: BackdropFilter(
-            filter: ImageFilter.blur(
-              sigmaX: blurAmount,
-              sigmaY: blurAmount,
-            ),
-            child: AnimatedContainer(
-              duration: const Duration(milliseconds: 150),
-              width: 48,
-              height: 48,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                // Dark mode: white @ 8%, Light mode: white @ 25%
-                color: isDark
-                    ? Colors.white.withValues(alpha: opacity * 0.67)  // Targets 8% at max
-                    : Colors.white.withValues(alpha: opacity * 2.08),  // Targets 25% at max
-                    
-                // Nearly invisible border (3-4% opacity)
-                border: Border.all(
-                  color: (isDark ? Colors.white : Colors.black).withValues(
-                    alpha: 0.04,
-                  ),
-                  width: 0.5,
-                ),
-              ),
-              child: Icon(
-                icon,
-                color: context.cFg.withValues(alpha: 0.9),
-                size: 24,
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
 // ══════════════════════════════════════════════════════════════════════════════
 // TYPING INDICATOR
 // ══════════════════════════════════════════════════════════════════════════════

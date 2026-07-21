@@ -1,37 +1,118 @@
+import 'dart:ui';
 
 import 'package:flutter/material.dart';
 
 /// Quick theme-aware color helpers for chat widgets.
 extension AppThemeX on BuildContext {
   bool get isDark => Theme.of(this).brightness == Brightness.dark;
-  Color get cBg     => isDark ? AppColors.darkBackground      : AppColors.lightBackground;
-  Color get cFg     => isDark ? AppColors.darkForeground      : AppColors.lightForeground;
-  Color get cCard   => isDark ? AppColors.darkCard            : AppColors.lightCard;
-  Color get cBorder => isDark ? AppColors.darkBorder          : AppColors.lightBorder;
-  Color get cMuted  => isDark ? AppColors.darkMutedForeground : AppColors.lightMutedForeground;
-  Color get cError  => isDark ? AppColors.darkDestructive     : AppColors.lightDestructive;
+  Color get cBg =>
+      isDark ? AppColors.darkBackground : AppColors.lightBackground;
+  Color get cFg =>
+      isDark ? AppColors.darkForeground : AppColors.lightForeground;
+  Color get cCard => isDark ? AppColors.darkCard : AppColors.lightCard;
+  Color get cBorder => isDark ? AppColors.darkBorder : AppColors.lightBorder;
+  Color get cMuted =>
+      isDark ? AppColors.darkMutedForeground : AppColors.lightMutedForeground;
+  Color get cError =>
+      isDark ? AppColors.darkDestructive : AppColors.lightDestructive;
   Color get cPrimary => isDark ? AppColors.darkPrimary : AppColors.lightPrimary;
   Color get cPrimaryFg => isDark
       ? AppColors.darkPrimaryForeground
       : AppColors.lightPrimaryForeground;
-  Color get cSidebar=> isDark ? AppColors.darkSidebar         : AppColors.lightSidebar;
+  Color get cSidebar => isDark ? AppColors.darkSidebar : AppColors.lightSidebar;
 
   /// A soft, theme-appropriate ambient shadow colour. In light mode this lifts
   /// white cards off the tinted canvas; in dark mode a deeper black adds depth.
   Color get cShadow => isDark
       ? const Color(0x33000000) // 20% black
-      : AppColors.lightShadow;  // ~8% near-black
+      : AppColors.lightShadow; // ~8% near-black
 
   /// A ready-to-use soft card shadow, tuned per theme. Spread across a couple
   /// of layers for a natural, non-harsh lift.
   List<BoxShadow> get softShadow => isDark
       ? const [
-          BoxShadow(color: Color(0x40000000), blurRadius: 12, offset: Offset(0, 4)),
+          BoxShadow(
+            color: Color(0x40000000),
+            blurRadius: 12,
+            offset: Offset(0, 4),
+          ),
         ]
       : const [
-          BoxShadow(color: Color(0x0F121114), blurRadius: 2, offset: Offset(0, 1)),
-          BoxShadow(color: Color(0x14121114), blurRadius: 16, offset: Offset(0, 6)),
+          BoxShadow(
+            color: Color(0x0F121114),
+            blurRadius: 2,
+            offset: Offset(0, 1),
+          ),
+          BoxShadow(
+            color: Color(0x14121114),
+            blurRadius: 16,
+            offset: Offset(0, 6),
+          ),
         ];
+
+  // ── Glass design system ─────────────────────────────────────────────────────
+  // A single source of truth for the frosted-glass surfaces used across the
+  // app (cards, chips, drawers, composer). Keeping the fill/border/shadow in one
+  // place means every glass surface reads as part of the same system.
+
+  /// Fill colour for a frosted-glass surface. [strong] gives a more opaque,
+  /// card-like surface; the default is a lighter chip/pill surface.
+  Color glassFill({bool strong = false}) {
+    if (isDark) {
+      return cCard.withValues(alpha: strong ? 0.55 : 0.4);
+    }
+    return cCard.withValues(alpha: strong ? 0.82 : 0.7);
+  }
+
+  /// Hairline border for a glass surface. Pass an [accent] to tint the edge in a
+  /// brand/category colour (used for focus states and active items).
+  Border glassBorder({Color? accent, bool focused = false}) {
+    final base = accent ?? cBorder;
+    final alpha = focused ? (isDark ? 0.55 : 0.85) : (isDark ? 0.30 : 0.55);
+    return Border.all(
+      color: base.withValues(alpha: alpha),
+      width: isDark ? 1 : 1.4,
+    );
+  }
+
+  /// A ready-made frosted-glass [BoxDecoration]. Wrap the child in a
+  /// [ClipRRect] + [BackdropFilter] (see [glassBlur]) to get the actual blur.
+  BoxDecoration glassDecoration({
+    double radius = 20,
+    bool strong = false,
+    Color? accent,
+    bool focused = false,
+    bool glow = false,
+  }) {
+    return BoxDecoration(
+      color: glassFill(strong: strong),
+      borderRadius: BorderRadius.circular(radius),
+      border: glassBorder(accent: accent, focused: focused),
+      boxShadow: [
+        // Soft ambient lift so glass panels float off the canvas (light mode
+        // needs this most; dark mode gets a gentle depth shadow).
+        if (!isDark)
+          BoxShadow(
+            color: (accent ?? Colors.black).withValues(
+              alpha: glow ? 0.12 : 0.06,
+            ),
+            blurRadius: glow ? 18 : 12,
+            offset: const Offset(0, 4),
+          )
+        else if (glow && accent != null)
+          BoxShadow(
+            color: accent.withValues(alpha: 0.20),
+            blurRadius: 22,
+            spreadRadius: -2,
+          ),
+      ],
+    );
+  }
+
+  /// The blur filter that pairs with [glassDecoration]. Default is a medium
+  /// frost; bump [sigma] for heavier surfaces like the composer.
+  ImageFilter glassBlur({double sigma = 8}) =>
+      ImageFilter.blur(sigmaX: sigma, sigmaY: sigma);
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

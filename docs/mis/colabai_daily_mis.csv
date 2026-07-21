@@ -1,0 +1,47 @@
+S.No,Date,Task Description,Developer,Est. Time,Status
+1,01-07-2026,Chat: planned multi-model comparison architecture and per-model tab UX,Abhiraj Patil,2.0h,Completed
+2,01-07-2026,Chat: reviewed enhance-api integration points,Abhiraj Patil,2.0h,Completed
+3,01-07-2026,Setup and environment sync for upcoming chat features,Abhiraj Patil,1.5h,Completed
+4,02-07-2026,Chat: integrated enhance API and added enhance button,Abhiraj Patil,2.5h,Completed
+5,02-07-2026,Chat: fixed user response substring handling bug,Abhiraj Patil,2.0h,Completed
+6,02-07-2026,Testing and QA pass on chat input flow,Abhiraj Patil,1.5h,Completed
+7,03-07-2026,Home: redesigned home screen layout,Abhiraj Patil,2.5h,Completed
+8,03-07-2026,Chat: fixed multi-model chip overflow issue,Abhiraj Patil,2.0h,Completed
+9,03-07-2026,Code review and cleanup of home screen components,Abhiraj Patil,1.5h,Completed
+10,06-07-2026,Theme: added persistent dark/light theme switching,Abhiraj Patil,2.0h,Completed
+11,06-07-2026,Chat: built multi-model chat comparison with per-model tabs,Abhiraj Patil,2.5h,Completed
+12,06-07-2026,Sidebar: paginated conversations sidebar with load-more,Abhiraj Patil,2.0h,Completed
+13,07-07-2026,Chat: built chat message model and presentation layer for multi-model support,Abhiraj Patil,3.0h,Completed
+14,07-07-2026,Testing and refinement of multi-model chat message rendering,Abhiraj Patil,3.0h,Completed
+15,08-07-2026,Theme: fixed light theme not applying when light mode selected,Abhiraj Patil,2.0h,Completed
+16,08-07-2026,Chat: added real brand SVG icons for AI model avatars,Abhiraj Patil,2.5h,Completed
+17,08-07-2026,Chat: reworked multi-model comparison for full-page reading and fixed related bugs,Abhiraj Patil,2.0h,Completed
+18,09-07-2026,Auth: investigated session restore issue on app launch,Abhiraj Patil,2.0h,Completed
+19,09-07-2026,Settings: planned domain entities and repository contract,Abhiraj Patil,2.5h,Completed
+20,09-07-2026,Code review and cleanup of auth module,Abhiraj Patil,1.5h,Completed
+21,10-07-2026,Settings: drafted API endpoints for settings module,Abhiraj Patil,2.0h,Completed
+22,10-07-2026,Settings: planned bloc state management structure,Abhiraj Patil,2.0h,Completed
+23,10-07-2026,Documentation and internal notes for settings module design,Abhiraj Patil,2.0h,Completed
+24,11-07-2026,Auth: restored user session from cached token on app launch,Abhiraj Patil,2.5h,Completed
+25,11-07-2026,Settings: added domain entities, models, repository and API endpoints,Abhiraj Patil,2.0h,Completed
+26,11-07-2026,Settings: added bloc state management for settings screens,Abhiraj Patil,2.0h,Completed
+27,14-07-2026,Settings: added settings screens UI and wired navigation from drawer,Abhiraj Patil,2.5h,Completed
+28,14-07-2026,Added image_picker and intl dependencies with iOS photo permission,Abhiraj Patil,2.0h,Completed
+29,14-07-2026,QA pass on settings navigation flow,Abhiraj Patil,1.5h,Completed
+30,15-07-2026,Auth: planned getProfile method for AuthRemoteDataSource,Abhiraj Patil,2.0h,Completed
+31,15-07-2026,Chat: reviewed model card layout padding issues,Abhiraj Patil,2.0h,Completed
+32,15-07-2026,Bug triage for suggestion button bloc code,Abhiraj Patil,2.0h,Completed
+33,16-07-2026,Auth: added getProfile method to AuthRemoteDataSource and updated user profile fetching in AuthRepositoryImpl,Abhiraj Patil,2.5h,Completed
+34,16-07-2026,Chat: refactored padding in model card layout,Abhiraj Patil,2.0h,Completed
+35,16-07-2026,Chat: updated suggestion button bloc code,Abhiraj Patil,2.0h,Completed
+36,17-07-2026,Chat: smoothed chat screen interactions and transitions,Abhiraj Patil,2.0h,Completed
+37,17-07-2026,Chat: replaced robot emoji with Lottie AI assistant animation,Abhiraj Patil,2.0h,Completed
+38,17-07-2026,Chat: polished chat bubbles, input bar and drawer sections,Abhiraj Patil,1.5h,Completed
+39,17-07-2026,Theme: refined theme colors, auth pages and settings scaffold,Abhiraj Patil,1.5h,Completed
+40,17-07-2026,Docs: added implementation notes and UI redesign guides,Abhiraj Patil,1.0h,Completed
+41,20-07-2026,Code review and regression testing across chat, theme and settings modules,Abhiraj Patil,2.5h,Completed
+42,20-07-2026,Planning and task breakdown for next sprint items,Abhiraj Patil,2.0h,Completed
+43,20-07-2026,Minor bug fixes reported from QA pass,Abhiraj Patil,2.0h,Completed
+44,21-07-2026,Reporting: created daily MIS tracking sheet for ColabAi project,Abhiraj Patil,2.0h,Completed
+45,21-07-2026,Code review and cleanup across recent chat/settings changes,Abhiraj Patil,2.0h,Completed
+46,21-07-2026,Planning and requirement gathering for upcoming features,Abhiraj Patil,2.0h,Completed

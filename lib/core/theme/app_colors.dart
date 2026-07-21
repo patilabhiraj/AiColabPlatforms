@@ -10,6 +10,10 @@ extension AppThemeX on BuildContext {
   Color get cBorder => isDark ? AppColors.darkBorder          : AppColors.lightBorder;
   Color get cMuted  => isDark ? AppColors.darkMutedForeground : AppColors.lightMutedForeground;
   Color get cError  => isDark ? AppColors.darkDestructive     : AppColors.lightDestructive;
+  Color get cPrimary => isDark ? AppColors.darkPrimary : AppColors.lightPrimary;
+  Color get cPrimaryFg => isDark
+      ? AppColors.darkPrimaryForeground
+      : AppColors.lightPrimaryForeground;
   Color get cSidebar=> isDark ? AppColors.darkSidebar         : AppColors.lightSidebar;
 
   /// A soft, theme-appropriate ambient shadow colour. In light mode this lifts

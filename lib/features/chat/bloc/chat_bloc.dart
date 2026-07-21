@@ -40,6 +40,7 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
     this._repository,
   ) : super(ChatInitial()) {
     on<ChatLoadConversations>(_onLoadConversations);
+    on<ChatClearSendError>(_onClearSendError);
     on<ChatLoadMoreConversations>(_onLoadMoreConversations);
     on<ChatSelectConversation>(_onSelectConversation);
     on<ChatSendMessage>(_onSendMessage);
@@ -58,6 +59,11 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
     on<ChatSelectModelTab>(_onSelectModelTab);
     on<ChatModelChunk>(_onModelChunk);
     on<ChatModelDone>(_onModelDone);
+  }
+
+  void _onClearSendError(ChatClearSendError event, Emitter<ChatState> emit) {
+    if (state is! ChatLoaded) return;
+    emit((state as ChatLoaded).copyWith(clearSendError: true));
   }
 
   Future<void> _onLoadConversations(
@@ -320,6 +326,7 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
       current.copyWith(
         messages: [...current.messages, userMsg],
         isSending: true,
+        clearSendError: true,
       ),
     );
 
@@ -564,6 +571,7 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
       current.copyWith(
         messages: [...current.messages, userMsg],
         isSending: true,
+        clearSendError: true,
       ),
     );
 
@@ -600,13 +608,29 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
     }
 
     if (state is! ChatLoaded) return;
-    final selectedIds = (state as ChatLoaded).selectedModelIds;
+    final loaded = state as ChatLoaded;
+
+    // Never send with an empty selection — the backend rejects modelId 0 with
+    // a 400. Fall back to the default selection when nothing is selected.
+    var selectedIds = loaded.selectedModelIds;
+    if (selectedIds.isEmpty) {
+      selectedIds = _defaultSelection(loaded.availableModels);
+      if (selectedIds.isEmpty) {
+        emit(loaded.copyWith(isSending: false, clearStreaming: true));
+        return;
+      }
+      emit(loaded.copyWith(selectedModelIds: selectedIds));
+    }
 
     if (selectedIds.length > 1) {
       await _streamMultiModel(conversationId, event.content, selectedIds, emit);
     } else {
-      final modelId = selectedIds.isNotEmpty ? selectedIds.first : 0;
-      await _streamSingleModel(conversationId, event.content, modelId, emit);
+      await _streamSingleModel(
+        conversationId,
+        event.content,
+        selectedIds.first,
+        emit,
+      );
     }
   }
 
@@ -628,6 +652,7 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
             return (state as ChatLoaded).copyWith(
               isSending: false,
               clearStreaming: true,
+              sendError: failure.message,
             );
           },
           (chunk) {

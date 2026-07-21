@@ -15,6 +15,10 @@ class ChatLoaded extends ChatState {
   final String? streamingMessageId;
   final List<ChatMessage> starredMessages;
 
+  /// Transient error from the last send attempt (e.g. quota exhausted). Shown
+  /// as a dismissible banner above the composer, then cleared.
+  final String? sendError;
+
   // ── Conversation list pagination ──────────────────────────────────────────
   /// Highest conversation page loaded so far (starts at 1).
   final int conversationsPage;
@@ -50,6 +54,7 @@ class ChatLoaded extends ChatState {
     this.streamingContent,
     this.streamingMessageId,
     this.starredMessages = const [],
+    this.sendError,
     this.conversationsPage = 1,
     this.hasMoreConversations = false,
     this.isLoadingMoreConversations = false,
@@ -73,6 +78,8 @@ class ChatLoaded extends ChatState {
     bool clearStreaming = false,
     String? streamingMessageId,
     List<ChatMessage>? starredMessages,
+    String? sendError,
+    bool clearSendError = false,
     int? conversationsPage,
     bool? hasMoreConversations,
     bool? isLoadingMoreConversations,
@@ -94,6 +101,7 @@ class ChatLoaded extends ChatState {
       streamingContent: clearStreaming ? null : (streamingContent ?? this.streamingContent),
       streamingMessageId: clearStreaming ? null : (streamingMessageId ?? this.streamingMessageId),
       starredMessages: starredMessages ?? this.starredMessages,
+      sendError: clearSendError ? null : (sendError ?? this.sendError),
       conversationsPage: conversationsPage ?? this.conversationsPage,
       hasMoreConversations: hasMoreConversations ?? this.hasMoreConversations,
       isLoadingMoreConversations:

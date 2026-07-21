@@ -470,15 +470,59 @@ Stream<String> sendMessageStream(String conversationId, String content) async* {
         }
       }
     } on DioException catch (e) {
-      logger.error('DioException in sendMessageStreamForModel', e);
-      throw ServerException(
-        message: e.response?.data['message'] ?? 'Server error occurred',
+      // With responseType: stream the error body is a ResponseBody, not a
+      // decoded Map — reading e.response?.data['message'] fails and the real
+      // server error is lost (logs show "Instance of 'ResponseBody'"). Drain
+      // the stream and decode it so the actual 4xx message surfaces.
+      final serverMessage = await _readStreamErrorMessage(e.response);
+      logger.error(
+        'DioException in sendMessageStreamForModel: $serverMessage',
+        e,
       );
+      throw ServerException(message: serverMessage ?? 'Server error occurred');
     } catch (e) {
       if (e is ServerException) rethrow;
       logger.error('Unexpected error in sendMessageStreamForModel', e);
       throw ServerException(message: 'Unexpected error: $e');
     }
+  }
+
+  /// Reads an error response whose body may be a streamed [ResponseBody]
+  /// (because the request used [ResponseType.stream]) and extracts a human
+  /// message from it. Returns null if nothing useful can be read.
+  Future<String?> _readStreamErrorMessage(Response<dynamic>? response) async {
+    if (response == null) return null;
+    final data = response.data;
+
+    String raw;
+    if (data is ResponseBody) {
+      try {
+        final bytes = <int>[];
+        await for (final chunk in data.stream) {
+          bytes.addAll(chunk);
+        }
+        raw = utf8.decode(bytes, allowMalformed: true).trim();
+      } catch (_) {
+        return null;
+      }
+    } else if (data is String) {
+      raw = data.trim();
+    } else if (data is Map) {
+      return (data['message'] ?? data['error'])?.toString();
+    } else {
+      return null;
+    }
+
+    if (raw.isEmpty) return null;
+    try {
+      final decoded = jsonDecode(raw);
+      if (decoded is Map) {
+        return (decoded['message'] ?? decoded['error'])?.toString() ?? raw;
+      }
+    } catch (_) {
+      // Not JSON — fall back to the raw text.
+    }
+    return raw;
   }
 
   @override

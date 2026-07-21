@@ -4,6 +4,9 @@ abstract class ChatEvent {}
 
 class ChatLoadConversations extends ChatEvent {}
 
+/// Dismisses the transient send-error banner (e.g. quota exhausted).
+class ChatClearSendError extends ChatEvent {}
+
 /// Loads the next page of conversations for the sidebar "Load More Chats".
 class ChatLoadMoreConversations extends ChatEvent {}
 

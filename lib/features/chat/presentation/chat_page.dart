@@ -267,27 +267,28 @@ class _ChatPageState extends State<ChatPage> {
             ),
             
             // ═══════════════════════════════════════════════════════════════
-            // TOP FADE - blurs only the status bar strip (time/battery/signal
-            // row), tapering smoothly within that strip instead of a hard edge.
+            // TOP GLASSMORPHISM - smooth frosted glass effect over status bar
+            // Strong blur for premium feel, subtle gradient fade for readability
             // ═══════════════════════════════════════════════════════════════
             Positioned(
               top: 0,
               left: 0,
               right: 0,
-              height: MediaQuery.of(context).padding.top,
+              height: 30,
               child: IgnorePointer(
                 child: ClipRect(
                   child: BackdropFilter(
-                    filter: ImageFilter.blur(sigmaX: 5, sigmaY: 5),
+                    filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
                     child: Container(
                       decoration: BoxDecoration(
                         gradient: LinearGradient(
                           begin: Alignment.topCenter,
                           end: Alignment.bottomCenter,
                           colors: [
-                            context.cBg.withValues(alpha: 0.3),
-                            context.cBg.withValues(alpha: 0.0),
+                            context.cBg.withValues(alpha: 0.25),
+                            context.cBg.withValues(alpha: 0.05),
                           ],
+                          stops: const [0.0, 1.0],
                         ),
                       ),
                     ),

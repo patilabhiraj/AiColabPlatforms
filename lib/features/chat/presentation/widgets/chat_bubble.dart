@@ -26,16 +26,8 @@ class ChatBubble extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Debug logging
-    if (!message.isUser) {
-      print('🎨 UI DEBUG: Rendering AI message');
-      print('🎨 UI DEBUG: isStreaming: $isStreaming');
-      print('🎨 UI DEBUG: suggestedQuestions: ${message.suggestedQuestions}');
-      print('🎨 UI DEBUG: suggestedQuestions isEmpty: ${message.suggestedQuestions?.isEmpty ?? true}');
-    }
-    
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 5),
+      padding: const EdgeInsets.symmetric(vertical: 6),
       child: message.isUser
           ? _UserBubble(message)
           : Column(
@@ -76,33 +68,25 @@ class _UserBubble extends StatelessWidget {
         child: GestureDetector(
           onLongPress: () => _copy(context, message.content),
           child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
+            padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
             decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: context.isDark
-                    ? const [Color(0xFF0F0308), Color(0xFF1B030D)]
-                    : [AppColors.landingPrimary, AppColors.landingPrimaryHover],
-              ),
+              // Clean, subtle bubble (ChatGPT style): a soft neutral fill in
+              // dark mode, a light tint in light mode — no gradient, no shadow.
+              color: context.isDark
+                  ? Colors.white.withValues(alpha: 0.08)
+                  : AppColors.landingPrimary.withValues(alpha: 0.10),
               borderRadius: const BorderRadius.only(
-                topLeft: Radius.circular(20),
-                topRight: Radius.circular(20),
-                bottomLeft: Radius.circular(20),
-                bottomRight: Radius.circular(4),
+                topLeft: Radius.circular(22),
+                topRight: Radius.circular(22),
+                bottomLeft: Radius.circular(22),
+                bottomRight: Radius.circular(6),
               ),
-              boxShadow: [
-                BoxShadow(
-                  color: AppColors.landingPrimary.withValues(alpha: 0.3),
-                  offset: const Offset(0, 4),
-                ),
-              ],
             ),
             child: Text(
               message.content,
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 15,
+              style: TextStyle(
+                color: context.cFg,
+                fontSize: 15.5,
                 height: 1.5,
                 letterSpacing: 0.1,
               ),
@@ -131,7 +115,6 @@ class _AiBubble extends StatelessWidget {
     final fg = context.cFg;
     final muted = context.cMuted;
     final card = context.cCard;
-    final border = context.cBorder;
 
     final multi = message.isMultiModel;
 
@@ -180,47 +163,11 @@ class _AiBubble extends StatelessWidget {
                 ),
               ),
 
-            // Bubble with Glassmorphism Effect ✨
-            ClipRRect(
-              borderRadius: const BorderRadius.only(
-                topLeft: Radius.circular(4),
-                topRight: Radius.circular(20),
-                bottomLeft: Radius.circular(20),
-                bottomRight: Radius.circular(20),
-              ),
-              child: BackdropFilter(
-                filter: ImageFilter.blur(
-                  sigmaX: context.isDark ? 12 : 8,
-                  sigmaY: context.isDark ? 12 : 8,
-                ),
-                child: Container(
-                  padding: const EdgeInsets.fromLTRB(16, 14, 16, 12),
-                  decoration: BoxDecoration(
-                    color: context.isDark
-                        ? card.withValues(alpha: 0.7)
-                        : card.withValues(alpha: 0.85),
-                    borderRadius: const BorderRadius.only(
-                      topLeft: Radius.circular(4),
-                      topRight: Radius.circular(20),
-                      bottomLeft: Radius.circular(20),
-                      bottomRight: Radius.circular(20),
-                    ),
-                    border: Border.all(
-                      color: border.withValues(
-                        alpha: context.isDark ? 0.9 : 1.0,
-                      ),
-                      width: context.isDark ? 1 : 1.5,
-                    ),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withValues(
-                          alpha: context.isDark ? 0.1 : 0.06,
-                        ),
-                        blurRadius: context.isDark ? 8 : 12,
-                        offset: Offset(0, context.isDark ? 2 : 3),
-                      ),
-                    ],
-                  ),
+            // Borderless answer — the AI response renders directly on the
+            // background (ChatGPT style): no card, no border, no blur. Just
+            // clean markdown text with an action bar beneath it.
+            Padding(
+              padding: const EdgeInsets.only(left: 2, right: 4),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -237,13 +184,13 @@ class _AiBubble extends StatelessWidget {
                                 styleSheet: MarkdownStyleSheet(
                                   p: TextStyle(
                                     color: fg,
-                                    fontSize: 15,
+                                    fontSize: 15.5,
                                     height: 1.6,
                                     letterSpacing: 0.1,
                                   ),
                                   strong: TextStyle(
                                     color: fg,
-                                    fontSize: 15,
+                                    fontSize: 15.5,
                                     fontWeight: FontWeight.bold,
                                     height: 1.6,
                                     letterSpacing: 0.1,
@@ -252,7 +199,7 @@ class _AiBubble extends StatelessWidget {
                                     backgroundColor: context.isDark
                                         ? card.withValues(alpha: 0.5)
                                         : AppColors.lightMuted,
-                                    // Dark maroon reads poorly on the dark card,
+                                    // Dark maroon reads poorly on the dark bg,
                                     // so use a lighter pink there.
                                     color: context.isDark
                                         ? const Color(0xFFFF6FA5)
@@ -261,14 +208,9 @@ class _AiBubble extends StatelessWidget {
                                   ),
                                   codeblockDecoration: BoxDecoration(
                                     color: context.isDark
-                                        ? card.withValues(alpha: 0.3)
+                                        ? card.withValues(alpha: 0.5)
                                         : AppColors.lightMuted,
-                                    borderRadius: BorderRadius.circular(8),
-                                    border: Border.all(
-                                      color: border.withValues(
-                                        alpha: context.isDark ? 0.3 : 0.5,
-                                      ),
-                                    ),
+                                    borderRadius: BorderRadius.circular(10),
                                   ),
                                 ),
                               ),
@@ -285,7 +227,7 @@ class _AiBubble extends StatelessWidget {
 
                   // Action bar (hidden while streaming).
                   if (!anyStreaming) ...[
-                    const SizedBox(height: 10),
+                    const SizedBox(height: 8),
                     _ActionBar(
                       message: message,
                       actionContent: displayContent,
@@ -295,8 +237,6 @@ class _AiBubble extends StatelessWidget {
                     ),
                   ],
                 ],
-              ),
-                ),
               ),
             ),
           ],

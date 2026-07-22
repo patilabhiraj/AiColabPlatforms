@@ -6,7 +6,6 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../auth/bloc/auth_bloc.dart';
 import '../../bloc/chat_bloc.dart';
 import '../../domain/entities/assistant.dart';
-import '../../domain/entities/chat_conversation.dart';
 import 'catalog_visuals.dart';
 
 /// Premium Empty State with Interactive Elements.
@@ -49,74 +48,9 @@ class ChatEmptyState extends StatelessWidget {
         ? authState.user.firstName.trim()
         : '';
 
-    // Most recent conversation, if the list has loaded, for the Continue card.
-    final chatState = context.watch<ChatBloc>().state;
-    final recent = chatState is ChatLoaded && chatState.conversations.isNotEmpty
-        ? chatState.conversations.first
-        : null;
-
     final greeting = firstName.isNotEmpty
         ? '${_getGreeting()}, $firstName'
         : _getGreeting();
-
-    // Recent conversations (top 1 shown, "View all" opens the drawer).
-    final recentList = chatState is ChatLoaded
-        ? chatState.conversations
-        : const <ChatConversation>[];
-
-    const categories = [
-      _CategorySeed(
-        'Brainstorm',
-        Icons.psychology_alt_outlined,
-        'Ideas & insights',
-        Color(0xFF8B5CF6),
-      ),
-      _CategorySeed(
-        'Learn',
-        Icons.school_outlined,
-        'Explain anything',
-        Color(0xFF10B981),
-      ),
-      _CategorySeed(
-        'Create',
-        Icons.auto_awesome_rounded,
-        'Write & design',
-        Color(0xFFF59E0B),
-      ),
-      _CategorySeed(
-        'Search',
-        Icons.search_rounded,
-        'Find anything',
-        Color(0xFF3B82F6),
-      ),
-    ];
-
-    const defaultPrompts = [
-      _SuggestionSeed(
-        'Give me ideas for a',
-        Icons.auto_awesome_rounded,
-        'weekend project',
-        Color(0xFF8B5CF6),
-      ),
-      _SuggestionSeed(
-        'Explain quantum',
-        Icons.description_outlined,
-        'computing simply',
-        Color(0xFF10B981),
-      ),
-      _SuggestionSeed(
-        'Write a short story',
-        Icons.edit_outlined,
-        'about space travel',
-        Color(0xFFF59E0B),
-      ),
-      _SuggestionSeed(
-        'Help me debug',
-        Icons.code_rounded,
-        'this code',
-        Color(0xFF3B82F6),
-      ),
-    ];
 
     return Container(
       decoration: BoxDecoration(
@@ -131,152 +65,164 @@ class ChatEmptyState extends StatelessWidget {
           stops: const [0.0, 0.3, 1.0],
         ),
       ),
-      child: Center(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.fromLTRB(20, 10, 20, 24),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const SizedBox(height: 10),
-              // ── Small labelled greeting (orb + "Good afternoon, Colab 👋") ────
-              _FadeInSlide(
-                delay: 150,
-                child: Row(
-                  children: [
-                    const _MiniOrb(),
-                    const SizedBox(width: 10),
-                    Flexible(
-                      child: Text(
-                        greeting,
-                        style: TextStyle(
-                          color: context.cMuted.withValues(alpha: 0.9),
-                          fontSize: 15,
-                          fontWeight: FontWeight.w500,
+      // A Stack lets us paint soft, drifting ambient orbs *behind* the welcome
+      // text so the otherwise-empty lower half feels alive and "filled" —
+      // without adding any actual content the user has to read or tap.
+      child: Stack(
+        children: [
+          const Positioned.fill(child: _AmbientOrbs()),
+
+          // Anchor the welcome block toward the upper third of the screen rather
+          // than dead-centre. With only the greeting + headline present,
+          // `Center` left a large, unbalanced empty gap above and below;
+          // aligning it high (fixed top offset that clears the floating header)
+          // keeps it visually tied to the header and reads as intentional.
+          SingleChildScrollView(
+            child: Padding(
+              padding: EdgeInsets.fromLTRB(
+                24,
+                MediaQuery.of(context).padding.top + 96,
+                24,
+                24,
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                // ── Small labelled greeting (orb + "Good afternoon, Abhiraj 👋") ─
+                _FadeInSlide(
+                  delay: 150,
+                  child: Row(
+                    children: [
+                      const _MiniOrb(),
+                      const SizedBox(width: 10),
+                      Flexible(
+                        child: Text(
+                          greeting,
+                          style: TextStyle(
+                            color: context.cMuted.withValues(alpha: 0.9),
+                            fontSize: 15,
+                            fontWeight: FontWeight.w500,
+                            letterSpacing: -0.1,
+                          ),
                         ),
                       ),
-                    ),
-                    const SizedBox(width: 6),
-                    const Text('👋', style: TextStyle(fontSize: 15)),
-                  ],
+                      const SizedBox(width: 6),
+                      const Text('👋', style: TextStyle(fontSize: 15)),
+                    ],
+                  ),
                 ),
-              ),
-              const SizedBox(height: 16),
+                const SizedBox(height: 20),
 
-              // ── Headline + mascot ──────────────────────────────────────────────
-              _FadeInSlide(
-                delay: 300,
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  children: [
-                    Expanded(
-                      child: Stack(
-                        clipBehavior: Clip.none,
-                        children: [
-                          RichText(
-                            text: TextSpan(
-                              style: TextStyle(
-                                color: context.cFg,
-                                fontSize: 32,
-                                fontWeight: FontWeight.w800,
-                                height: 1.15,
-                                letterSpacing: -0.8,
-                              ),
-                              children: [
-                                const TextSpan(
-                                  text: 'What should\nwe figure out\n',
-                                ),
-                                TextSpan(
-                                  text: 'together?',
-                                  style: const TextStyle(
-                                    color: AppColors.landingPrimary,
+                // ── Headline + mascot ────────────────────────────────────────────
+                _FadeInSlide(
+                  delay: 300,
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      Expanded(
+                        child: Padding(
+                          // Extra bottom room so the squiggle underline (drawn
+                          // 10px below the text) never clips into the mascot row.
+                          padding: const EdgeInsets.only(bottom: 12),
+                          child: Stack(
+                            clipBehavior: Clip.none,
+                            children: [
+                              // Soft glow directly behind the headline so the
+                              // text feels lit from within rather than floating
+                              // on a flat background.
+                              Positioned(
+                                left: -12,
+                                top: 6,
+                                child: Container(
+                                  width: 150,
+                                  height: 120,
+                                  decoration: BoxDecoration(
+                                    gradient: RadialGradient(
+                                      colors: [
+                                        AppColors.landingPrimary.withValues(
+                                          alpha: context.isDark ? 0.22 : 0.12,
+                                        ),
+                                        AppColors.landingPrimary.withValues(
+                                          alpha: 0.0,
+                                        ),
+                                      ],
+                                    ),
                                   ),
                                 ),
-                              ],
-                            ),
-                          ),
-                          Positioned(
-                            left: 0,
-                            bottom: -10,
-                            child: CustomPaint(
-                              size: const Size(88, 10),
-                              painter: _SquigglePainter(
-                                color: AppColors.landingPrimary.withValues(
-                                  alpha: 0.5,
+                              ),
+                              // Headline: first two lines in the foreground
+                              // colour, and "together?" painted with a
+                              // magenta→violet gradient (via a WidgetSpan that
+                              // shader-masks only that word) for a richer,
+                              // premium finish.
+                              RichText(
+                                text: TextSpan(
+                                  style: TextStyle(
+                                    color: context.cFg,
+                                    fontSize: 33,
+                                    fontWeight: FontWeight.w800,
+                                    height: 1.18,
+                                    letterSpacing: -0.9,
+                                  ),
+                                  children: [
+                                    const TextSpan(
+                                      text: 'What should\nwe figure out\n',
+                                    ),
+                                    WidgetSpan(
+                                      child: ShaderMask(
+                                        shaderCallback: (bounds) =>
+                                            const LinearGradient(
+                                              begin: Alignment.topLeft,
+                                              end: Alignment.bottomRight,
+                                              colors: [
+                                                AppColors.landingPrimary,
+                                                Color(0xFFC2185B),
+                                                Color(0xFF8B5CF6),
+                                              ],
+                                            ).createShader(bounds),
+                                        child: const Text(
+                                          'together?',
+                                          style: TextStyle(
+                                            color: Colors.white,
+                                            fontSize: 33,
+                                            fontWeight: FontWeight.w800,
+                                            height: 1.18,
+                                            letterSpacing: -0.9,
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  ],
                                 ),
                               ),
-                            ),
+                              Positioned(
+                                left: 2,
+                                bottom: -2,
+                                child: CustomPaint(
+                                  size: const Size(96, 10),
+                                  painter: _SquigglePainter(
+                                    color: AppColors.landingPrimary.withValues(
+                                      alpha: 0.5,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ],
                           ),
-                        ],
+                        ),
                       ),
-                    ),
-                    const SizedBox(width: 12),
-                    const _MascotOrb(),
-                  ],
+                      const SizedBox(width: 8),
+                      const _MascotOrb(),
+                    ],
+                  ),
                 ),
+                const SizedBox(height: 28),
+                ],
               ),
-              const SizedBox(height: 28),
-
-              // ── Recent conversations ─────────────────────────────────────────
-              // if (recent != null) ...[
-              //   const SizedBox(height: 24),
-              //   _FadeInSlide(
-              //     delay: 440,
-              //     child: ClipRRect(
-              //       borderRadius: BorderRadius.circular(20),
-              //       child: BackdropFilter(
-              //         filter: context.glassBlur(sigma: 8),
-              //         child: Container(
-              //           padding: const EdgeInsets.all(16),
-              //           decoration: context.glassDecoration(radius: 20),
-              //           child: Column(
-              //             crossAxisAlignment: CrossAxisAlignment.start,
-              //             children: [
-              //               Row(
-              //                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              //                 children: [
-              //                   Text(
-              //                     'Recent conversations',
-              //                     style: TextStyle(
-              //                       color: context.cFg,
-              //                       fontSize: 15,
-              //                       fontWeight: FontWeight.w700,
-              //                       letterSpacing: -0.2,
-              //                     ),
-              //                   ),
-              //                   if (recentList.length > 1)
-              //                     GestureDetector(
-              //                       onTap: () =>
-              //                           Scaffold.of(context).openDrawer(),
-              //                       child: const Text(
-              //                         'View all',
-              //                         style: TextStyle(
-              //                           color: AppColors.landingPrimary,
-              //                           fontSize: 13,
-              //                           fontWeight: FontWeight.w600,
-              //                         ),
-              //                       ),
-              //                     ),
-              //                 ],
-              //               ),
-              //               const SizedBox(height: 12),
-              //               _ContinueCard(
-              //                 conversation: recent,
-              //                 onTap: () => context.read<ChatBloc>().add(
-              //                   ChatSelectConversation(recent),
-              //                 ),
-              //               ),
-              //             ],
-              //           ),
-              //         ),
-              //       ),
-              //     ),
-              //   ),
-              // ],
-          
-            ],
+            ),
           ),
-        ),
+        ],
       ),
     );
   }
@@ -377,20 +323,22 @@ class ChatEmptyState extends StatelessWidget {
   }
 }
 
-// ── Animated AI orb ───────────────────────────────────────────────────────────
-/// A softly breathing, glowing gradient orb — the signature "AI" visual that
-/// anchors the welcome screen.
-class _AiOrb extends StatefulWidget {
-  const _AiOrb();
+// ── Ambient background orbs ───────────────────────────────────────────────────
+/// Soft, blurred, slowly drifting colour orbs painted behind the welcome text.
+/// They fill the otherwise-empty lower half of the home screen with a living,
+/// premium glow — purely decorative, never interactive, and adding no content.
+class _AmbientOrbs extends StatefulWidget {
+  const _AmbientOrbs();
 
   @override
-  State<_AiOrb> createState() => _AiOrbState();
+  State<_AmbientOrbs> createState() => _AmbientOrbsState();
 }
 
-class _AiOrbState extends State<_AiOrb> with SingleTickerProviderStateMixin {
+class _AmbientOrbsState extends State<_AmbientOrbs>
+    with SingleTickerProviderStateMixin {
   late final AnimationController _ctrl = AnimationController(
     vsync: this,
-    duration: const Duration(seconds: 4),
+    duration: const Duration(seconds: 18),
   )..repeat(reverse: true);
 
   @override
@@ -402,52 +350,60 @@ class _AiOrbState extends State<_AiOrb> with SingleTickerProviderStateMixin {
   @override
   Widget build(BuildContext context) {
     const primary = AppColors.landingPrimary;
-    return AnimatedBuilder(
-      animation: _ctrl,
-      builder: (context, _) {
-        final t = Curves.easeInOut.transform(_ctrl.value);
-        final scale = 0.94 + t * 0.06;
-        final glow = 0.35 + t * 0.35;
-        return Container(
-          width: 96,
-          height: 96,
-          alignment: Alignment.center,
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            boxShadow: [
-              BoxShadow(
-                color: primary.withValues(alpha: glow * 0.5),
-                blurRadius: 40 + t * 20,
-                spreadRadius: 4 + t * 6,
+    const violet = Color(0xFF8B5CF6);
+    const blue = Color(0xFF3B82F6);
+    final isDark = context.isDark;
+    // Keep the glow gentle in light mode so text stays crisp.
+    final k = isDark ? 1.0 : 0.55;
+
+    return IgnorePointer(
+      child: AnimatedBuilder(
+        animation: _ctrl,
+        builder: (context, _) {
+          final t = Curves.easeInOut.transform(_ctrl.value);
+          return Stack(
+            children: [
+              // Large brand orb drifting on the left, mid-screen.
+              Positioned(
+                left: -70 + t * 24,
+                top: 200 + t * 30,
+                child: _blurCircle(260, primary.withValues(alpha: 0.16 * k)),
+              ),
+              // Violet orb, lower-right, drifts the opposite way.
+              Positioned(
+                right: -80 - t * 20,
+                bottom: 120 + t * 40,
+                child: _blurCircle(240, violet.withValues(alpha: 0.14 * k)),
+              ),
+              // Small cool-blue accent orb, upper-right.
+              Positioned(
+                right: 10 + t * 18,
+                top: 150 - t * 20,
+                child: _blurCircle(150, blue.withValues(alpha: 0.10 * k)),
+              ),
+              // Faint deep orb near the bottom to ground the composer area.
+              Positioned(
+                left: 40 - t * 16,
+                bottom: 30 + t * 20,
+                child: _blurCircle(200, primary.withValues(alpha: 0.10 * k)),
               ),
             ],
-          ),
-          child: Transform.scale(
-            scale: scale,
-            child: Container(
-              width: 72,
-              height: 72,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                gradient: LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [
-                    Color.lerp(primary, Colors.white, 0.25)!,
-                    primary,
-                    Color.lerp(primary, Colors.black, 0.25)!,
-                  ],
-                ),
-              ),
-              child: Icon(
-                Icons.auto_awesome_rounded,
-                color: Colors.white.withValues(alpha: 0.95),
-                size: 34,
-              ),
-            ),
-          ),
-        );
-      },
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _blurCircle(double size, Color color) {
+    return Container(
+      width: size,
+      height: size,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        gradient: RadialGradient(
+          colors: [color, color.withValues(alpha: 0.0)],
+        ),
+      ),
     );
   }
 }
@@ -482,121 +438,6 @@ class _MiniOrb extends StatelessWidget {
         Icons.auto_awesome_rounded,
         color: Colors.white,
         size: 15,
-      ),
-    );
-  }
-}
-
-// ── Continue card (resume most recent chat) ───────────────────────────────────
-class _ContinueCard extends StatelessWidget {
-  const _ContinueCard({required this.conversation, required this.onTap});
-
-  final ChatConversation conversation;
-  final VoidCallback onTap;
-
-  /// Short "2m ago" / "3h ago" / "5d ago" style relative time.
-  String _relativeTime(DateTime time) {
-    final diff = DateTime.now().difference(time);
-    if (diff.inMinutes < 1) return 'just now';
-    if (diff.inMinutes < 60) return '${diff.inMinutes}m ago';
-    if (diff.inHours < 24) return '${diff.inHours}h ago';
-    if (diff.inDays < 7) return '${diff.inDays}d ago';
-    return '${(diff.inDays / 7).floor()}w ago';
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    const accent = AppColors.landingPrimary;
-    final isDark = context.isDark;
-    final title = conversation.title.trim().isNotEmpty
-        ? conversation.title.trim()
-        : 'Untitled chat';
-
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(18),
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(18),
-          child: BackdropFilter(
-            filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
-            child: Ink(
-              decoration: BoxDecoration(
-                color: isDark
-                    ? context.cCard.withValues(alpha: 0.45)
-                    : context.cCard.withValues(alpha: 0.7),
-                borderRadius: BorderRadius.circular(18),
-                border: Border.all(
-                  color: context.cBorder.withValues(alpha: isDark ? 0.5 : 0.7),
-                  width: isDark ? 1 : 1.5,
-                ),
-                boxShadow: !isDark
-                    ? [
-                        BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.06),
-                          blurRadius: 12,
-                          offset: const Offset(0, 3),
-                        ),
-                      ]
-                    : null,
-              ),
-              child: Padding(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 14,
-                ),
-                child: Row(
-                  children: [
-                    // Small "in progress" dot
-                    Container(
-                      width: 8,
-                      height: 8,
-                      margin: const EdgeInsets.only(right: 12),
-                      decoration: const BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: accent,
-                      ),
-                    ),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'Continue — $title',
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: TextStyle(
-                              color: context.cFg,
-                              fontSize: 15,
-                              fontWeight: FontWeight.w600,
-                              letterSpacing: -0.2,
-                            ),
-                          ),
-                          const SizedBox(height: 3),
-                          Text(
-                            _relativeTime(conversation.updatedAt),
-                            style: TextStyle(
-                              color: context.cMuted.withValues(alpha: 0.7),
-                              fontSize: 12.5,
-                              height: 1.3,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    Icon(
-                      Icons.chevron_right_rounded,
-                      size: 20,
-                      color: context.cMuted.withValues(alpha: 0.55),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ),
-        ),
       ),
     );
   }
@@ -713,99 +554,6 @@ class _PromptChip extends StatelessWidget {
                       ),
                     ),
                   ),
-                ],
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-// ── Default suggestion seed data ──────────────────────────────────────────────
-class _SuggestionSeed {
-  const _SuggestionSeed(this.title, this.icon, this.subtitle, this.color);
-  final String title;
-  final IconData icon;
-  final String subtitle;
-  final Color color;
-}
-
-// ── Category seed data (Brainstorm / Learn / Create / Search) ────────────────
-class _CategorySeed {
-  const _CategorySeed(this.label, this.icon, this.subtitle, this.color);
-  final String label;
-  final IconData icon;
-  final String subtitle;
-  final Color color;
-}
-
-// ── Category pill (horizontal scroller under the headline) ───────────────────
-class _CategoryPill extends StatelessWidget {
-  const _CategoryPill({required this.seed, required this.onTap});
-
-  final _CategorySeed seed;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(16),
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(16),
-          child: BackdropFilter(
-            filter: context.glassBlur(sigma: 20),
-            child: Container(
-              // padding: const EdgeInsets.symmetric(horizontal: 12, vertical:5),
-              decoration: context.glassDecoration(radius: 16, strong: true),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Container(
-                    width: 34,
-                    height: 34,
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                        colors: [
-                          seed.color.withValues(alpha: 0.22),
-                          seed.color.withValues(alpha: 0.12),
-                        ],
-                      ),
-                      borderRadius: BorderRadius.circular(11),
-                    ),
-                    child: Icon(seed.icon, size: 18, color: seed.color),
-                  ),
-                  const SizedBox(width: 10),
-                  Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        seed.label,
-                        style: TextStyle(
-                          color: context.cFg,
-                          fontSize: 13.5,
-                          fontWeight: FontWeight.w700,
-                          letterSpacing: -0.2,
-                        ),
-                      ),
-                      const SizedBox(height: 1),
-                      Text(
-                        seed.subtitle,
-                        style: TextStyle(
-                          color: context.cMuted.withValues(alpha: 0.75),
-                          fontSize: 11,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(width: 4),
                 ],
               ),
             ),

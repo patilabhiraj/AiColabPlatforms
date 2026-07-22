@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
+import '../bloc/auth_bloc.dart';
 import '../../../app/routes/router.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/utils/app_logger.dart';
@@ -11,9 +13,16 @@ import '../domain/usecases/resend_email_otp_usecase.dart';
 class EmailVerificationPage extends StatefulWidget {
   final String email;
 
+  /// The password entered during register/login. When present, the page
+  /// auto-logs the user in after a successful OTP verification so they land
+  /// on home directly instead of the login screen. Empty when the page was
+  /// reached without credentials (e.g. deep link) — then we fall back to login.
+  final String password;
+
   const EmailVerificationPage({
     super.key,
     required this.email,
+    this.password = '',
   });
 
   @override
@@ -61,10 +70,31 @@ class _EmailVerificationPageState extends State<EmailVerificationPage> {
             CustomSnackBar.showError(context, failure.message);
           }
         },
-        (_) async {
-          logger.info('✅ Email verified successfully');
-          if (mounted) {
-            CustomSnackBar.showSuccess(context, 'Email verified! Please login again.');
+        (loggedIn) async {
+          logger.info('✅ Email verified successfully (loggedIn: $loggedIn)');
+          if (!mounted) return;
+
+          if (loggedIn) {
+            // Backend auto-logged the user in on verification. Refresh the auth
+            // state from the freshly saved token and go straight to home.
+            CustomSnackBar.showSuccess(context, 'Email verified! Welcome 🎉');
+            context.read<AuthBloc>().add(AuthCheckRequested());
+            context.go(AppRouter.chat);
+          } else if (widget.password.isNotEmpty) {
+            // Backend confirmed the OTP but didn't issue a session. We still
+            // have the password from registration, so log the user in silently
+            // and let AuthBloc drive navigation to home — no re-typing needed.
+            CustomSnackBar.showSuccess(context, 'Email verified! Welcome 🎉');
+            context.read<AuthBloc>().add(
+              AuthLoginRequested(
+                email: widget.email,
+                password: widget.password,
+              ),
+            );
+          } else {
+            // No session and no cached password (e.g. deep-linked here) — the
+            // user must log in manually.
+            CustomSnackBar.showSuccess(context, 'Email verified! Please login.');
             context.go(AppRouter.login);
           }
         },
@@ -112,6 +142,23 @@ class _EmailVerificationPageState extends State<EmailVerificationPage> {
 
   @override
   Widget build(BuildContext context) {
+    return BlocListener<AuthBloc, AuthState>(
+      // React to the silent auto-login fired after OTP verification.
+      listener: (context, state) {
+        if (state is AuthAuthenticated) {
+          context.go(AppRouter.chat);
+        } else if (state is AuthError) {
+          // Verified but auto-login failed — send the user to login to retry
+          // manually rather than leaving them stuck on this page.
+          CustomSnackBar.showError(context, state.message);
+          context.go(AppRouter.login);
+        }
+      },
+      child: _buildScaffold(context),
+    );
+  }
+
+  Widget _buildScaffold(BuildContext context) {
     return Scaffold(
       backgroundColor: context.cBg,
       appBar: AppBar(

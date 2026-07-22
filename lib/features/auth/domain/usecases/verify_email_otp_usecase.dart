@@ -7,7 +7,9 @@ class VerifyEmailOtpUseCase {
 
   VerifyEmailOtpUseCase(this.repository);
 
-  Future<Either<Failure, void>> call(String email, String otp) async {
+  /// Returns `true` when verification also established a session (auto-login),
+  /// `false` when the user still needs to log in manually.
+  Future<Either<Failure, bool>> call(String email, String otp) async {
     return await repository.verifyEmailOtp(email, otp);
   }
 }

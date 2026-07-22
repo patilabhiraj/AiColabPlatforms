@@ -117,10 +117,16 @@ class AuthRepositoryImpl implements AuthRepository {
   }
 
   @override
-  Future<Either<Failure, void>> verifyEmailOtp(String email, String otp) async {
+  Future<Either<Failure, bool>> verifyEmailOtp(String email, String otp) async {
     try {
-      await remoteDataSource.verifyEmailOtp(email, otp);
-      return const Right(null);
+      final token = await remoteDataSource.verifyEmailOtp(email, otp);
+      if (token.isNotEmpty) {
+        // Backend auto-logged the user in on verification — persist the session
+        // so the app can go straight to home instead of the login screen.
+        await localDataSource.saveToken(token);
+        return const Right(true);
+      }
+      return const Right(false);
     } on DioException catch (e) {
       return Left(ServerFailure(_dioMessage(e, 'Failed to verify OTP.')));
     } catch (_) {

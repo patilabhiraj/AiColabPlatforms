@@ -51,7 +51,12 @@ class _RegisterPageState extends State<RegisterPage> {
             context,
             'Please verify your email. OTP sent to ${state.email}',
           );
-          context.go('${AppRouter.emailVerification}?email=${Uri.encodeComponent(state.email)}');
+          context.go(
+            '${AppRouter.emailVerification}?email=${Uri.encodeComponent(state.email)}',
+            // Carry the password so the verification page can auto-login and
+            // land the user on home directly after OTP verification.
+            extra: _passwordCtrl.text,
+          );
         }
       },
 builder: (context, state) {

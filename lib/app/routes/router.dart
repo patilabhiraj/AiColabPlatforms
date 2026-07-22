@@ -46,7 +46,13 @@ class AppRouter {
           path: emailVerification,
           builder: (context, state) {
             final email = state.uri.queryParameters['email'] ?? '';
-            return EmailVerificationPage(email: email);
+            // Password is passed via `extra` (not the URL) from the
+            // register/login flow so that, after OTP verification, we can
+            // auto-login and go straight to home without asking the user to
+            // re-enter their credentials. Kept out of the query string so it
+            // never lands in logs or browser history.
+            final password = state.extra is String ? state.extra as String : '';
+            return EmailVerificationPage(email: email, password: password);
           },
         ),
         GoRoute(

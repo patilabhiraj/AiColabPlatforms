@@ -17,7 +17,10 @@ abstract class AuthRepository {
     required String otp,
     required String newPassword,
   });
-  Future<Either<Failure, void>> verifyEmailOtp(String email, String otp);
+  /// Verifies the email OTP. Resolves to `true` when the backend also returned
+  /// a session token (user is now logged in), `false` when it only confirmed
+  /// the OTP and the user must still log in manually.
+  Future<Either<Failure, bool>> verifyEmailOtp(String email, String otp);
   Future<Either<Failure, void>> resendEmailOtp(String email);
   Future<Either<Failure, UserEntity?>> getCachedUser();
   Future<Either<Failure, void>> logout();

@@ -10,7 +10,10 @@ abstract class AuthRemoteDataSource {
   Future<UserModel> googleLogin(String token);
   Future<void> forgotPassword(String email);
   Future<void> resetPassword(String email, String otp, String newPassword);
-  Future<void> verifyEmailOtp(String email, String otp);
+
+  /// Verifies the email OTP. Returns the JWT token if the backend auto-logs the
+  /// user in on verification, or an empty string if it only confirms the OTP.
+  Future<String> verifyEmailOtp(String email, String otp);
   Future<void> resendEmailOtp(String email);
   Future<UserModel> getProfile();
 }
@@ -94,11 +97,20 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
   }
 
   @override
-  Future<void> verifyEmailOtp(String email, String otp) async {
-    await apiClient.dio.post(
+  Future<String> verifyEmailOtp(String email, String otp) async {
+    final response = await apiClient.dio.post(
       ApiConstants.verifyEmailOtp,
       data: {"email": email, "otp": otp},
     );
+
+    // If the backend auto-logs the user in on verification, it returns a JWT.
+    // Reuse UserModel's tolerant token extraction (handles token/accessToken,
+    // top-level or nested under `data`). Empty string means "verified only".
+    try {
+      return UserModel.fromJson(response.data).token;
+    } catch (_) {
+      return '';
+    }
   }
 
   @override

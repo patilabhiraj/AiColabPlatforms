@@ -23,11 +23,18 @@ class App extends StatelessWidget {
         BlocProvider(create: (_) => sl<ForgotPasswordBloc>()),
       ],
       child: BlocListener<AuthBloc, AuthState>(
+        // Only react to a genuine logout: a transition INTO AuthInitial from
+        // some other state. This avoids firing on app startup (where the bloc
+        // already starts in AuthInitial before AuthCheckRequested runs).
+        listenWhen: (previous, current) =>
+            current is AuthInitial && previous is! AuthInitial,
         listener: (context, state) {
-          if (state is AuthInitial) {
-            logger.info('🚪 User logged out - navigating to splash');
-            context.go(AppRouter.splash);
-          }
+          // Go straight to login. Routing through the splash page would
+          // re-trigger SplashBloc's cached-session check and its auto-nav,
+          // which races with this navigation and causes the app to hang/crash
+          // right after logout.
+          logger.info('🚪 User logged out - navigating to login');
+          context.go(AppRouter.login);
         },
         // Rebuild MaterialApp whenever the user toggles the theme so the whole
         // app switches between light and dark instantly.

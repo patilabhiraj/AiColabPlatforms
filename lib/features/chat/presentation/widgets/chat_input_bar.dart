@@ -211,13 +211,12 @@ class _ChatInputBarState extends State<ChatInputBar>
                             onTap: widget.enabled ? _openComposerMenu : null,
                           ),
 
-                          // Single / Multi toggle
-                          const _ModeToggle(),
-                          const SizedBox(width: 8),
-
-                          // Stacked avatars of the selected models (multi
-                          // mode) — tap to open the model picker.
-                          _SelectedModelsBadge(
+                          // Single model selector — shows the active model name
+                          // (or "N models" when several are picked) and opens
+                          // the model picker. There is no separate Single/Multi
+                          // toggle: the mode is derived from how many models the
+                          // user selects in the picker.
+                          _ModelSelectorButton(
                             onTap: widget.enabled ? _openComposerMenu : null,
                           ),
 
@@ -304,108 +303,6 @@ class _SelectionPreview extends StatelessWidget {
   }
 }
 
-// ── Stacked selected-model avatars (multi mode) ───────────────────────────────
-/// Compact overlapping circles for the selected models — the first two model
-/// icons plus a "+N" counter — instead of a row of chips. Tapping opens the
-/// composer menu to manage the selection.
-class _SelectedModelsBadge extends StatelessWidget {
-  const _SelectedModelsBadge({this.onTap});
-
-  final VoidCallback? onTap;
-
-  static const double _size = 30;
-  static const double _step = 20; // horizontal offset between circles
-
-  @override
-  Widget build(BuildContext context) {
-    return BlocBuilder<ChatBloc, ChatState>(
-      buildWhen: (a, b) => b is ChatLoaded,
-      builder: (context, state) {
-        if (state is! ChatLoaded ||
-            !state.multiMode ||
-            state.selectedModelIds.length < 2) {
-          return const SizedBox.shrink();
-        }
-
-        // Resolve ids → models with a nullable lookup (avoids the
-        // firstWhere/orElse covariance trap with AiModelModel).
-        final models = <AiModel>[];
-        for (final id in state.selectedModelIds) {
-          for (final m in state.availableModels) {
-            if (m.id == id) {
-              models.add(m);
-              break;
-            }
-          }
-        }
-        if (models.isEmpty) return const SizedBox.shrink();
-
-        final visible = models.take(2).toList();
-        final extra = models.length - visible.length;
-        final itemCount = visible.length + (extra > 0 ? 1 : 0);
-
-        return GestureDetector(
-          onTap: onTap,
-          child: SizedBox(
-            height: _size,
-            width: _step * (itemCount - 1) + _size,
-            child: Stack(
-              children: [
-                for (var i = 0; i < visible.length; i++)
-                  Positioned(
-                    left: i * _step,
-                    child: _AvatarCircle(
-                      child: CatalogVisuals.modelAvatar(
-                        visible[i].externalId,
-                        size: 15,
-                      ),
-                    ),
-                  ),
-                if (extra > 0)
-                  Positioned(
-                    left: visible.length * _step,
-                    child: _AvatarCircle(
-                      child: Text(
-                        '+$extra',
-                        style: const TextStyle(
-                          color: Colors.black87,
-                          fontSize: 11,
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                    ),
-                  ),
-              ],
-            ),
-          ),
-        );
-      },
-    );
-  }
-}
-
-/// One circle of the stacked-avatar cluster: white face with a ring in the
-/// composer background colour so overlapping circles read as separate coins.
-class _AvatarCircle extends StatelessWidget {
-  const _AvatarCircle({required this.child});
-
-  final Widget child;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: _SelectedModelsBadge._size,
-      height: _SelectedModelsBadge._size,
-      decoration: BoxDecoration(
-        color: Colors.white,
-        shape: BoxShape.circle,
-        border: Border.all(color: context.cBg, width: 2),
-      ),
-      child: Center(child: child),
-    );
-  }
-}
-
 class _Pill extends StatelessWidget {
   const _Pill({
     required this.icon,
@@ -462,39 +359,95 @@ class _Pill extends StatelessWidget {
   }
 }
 
-// ── Single / Multi toggle ─────────────────────────────────────────────────────
-class _ModeToggle extends StatelessWidget {
-  const _ModeToggle();
+// ── Model selector button ─────────────────────────────────────────────────────
+/// A single pill that shows the active model (icon + name), or "N models" when
+/// several are selected, with a dropdown chevron. Tapping opens the composer
+/// menu where the user picks one (single) or several (multi) — the mode is
+/// derived from the selection count, so there is no separate Single/Multi
+/// toggle anymore.
+class _ModelSelectorButton extends StatelessWidget {
+  const _ModelSelectorButton({this.onTap});
+
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
     return BlocBuilder<ChatBloc, ChatState>(
       buildWhen: (a, b) => b is ChatLoaded,
       builder: (context, state) {
-        final multi = state is ChatLoaded && state.multiMode;
-        return Container(
-          padding: const EdgeInsets.all(2),
-          decoration: BoxDecoration(
-            color: context.cCard.withValues(alpha: context.isDark ? 0.6 : 0.9),
-            borderRadius: BorderRadius.circular(20),
-            border: Border.all(color: context.cBorder.withValues(alpha: 0.4)),
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              _ModeChip(
-                label: 'Single',
-                active: !multi,
-                onTap: () =>
-                    context.read<ChatBloc>().add(ChatSetMultiMode(false)),
+        // Resolve the current selection → the actual model objects (in the
+        // order they were selected), so we can show their real icons.
+        final models = <AiModel>[];
+        if (state is ChatLoaded) {
+          for (final id in state.selectedModelIds) {
+            for (final m in state.availableModels) {
+              if (m.id == id) {
+                models.add(m);
+                break;
+              }
+            }
+          }
+        }
+
+        // Leading visual + label:
+        // • 1 model  → its icon + name
+        // • 2+ models → stacked model icons + "N models"
+        Widget leading;
+        String label;
+        if (models.length > 1) {
+          leading = _StackedModelIcons(models: models);
+          label = '${models.length} models';
+        } else if (models.length == 1) {
+          leading = SizedBox(
+            width: 18,
+            height: 18,
+            child: Center(
+              child: CatalogVisuals.modelAvatar(models.first.externalId, size: 16),
+            ),
+          );
+          label = models.first.name;
+        } else {
+          leading = const SizedBox.shrink();
+          label = 'Model';
+        }
+
+        return GestureDetector(
+          onTap: onTap,
+          child: Container(
+            padding: const EdgeInsets.fromLTRB(8, 6, 6, 6),
+            decoration: BoxDecoration(
+              color: context.cCard.withValues(
+                alpha: context.isDark ? 0.6 : 0.9,
               ),
-              _ModeChip(
-                label: 'Multi',
-                active: multi,
-                onTap: () =>
-                    context.read<ChatBloc>().add(ChatSetMultiMode(true)),
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(
+                color: context.cBorder.withValues(alpha: 0.4),
               ),
-            ],
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                leading,
+                const SizedBox(width: 6),
+                ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 120),
+                  child: Text(
+                    label,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                      color: context.cFg.withValues(alpha: 0.9),
+                    ),
+                  ),
+                ),
+                Icon(
+                  Icons.keyboard_arrow_down_rounded,
+                  size: 18,
+                  color: context.cMuted.withValues(alpha: 0.8),
+                ),
+              ],
+            ),
           ),
         );
       },
@@ -502,46 +455,77 @@ class _ModeToggle extends StatelessWidget {
   }
 }
 
-class _ModeChip extends StatelessWidget {
-  const _ModeChip({
-    required this.label,
-    required this.active,
-    required this.onTap,
-  });
+// ── Stacked model icons (used inside the selector when 2+ models chosen) ──────
+/// Overlapping avatar coins for the selected models — up to three icons plus a
+/// "+N" coin when more are selected — so the button shows *which* models are
+/// active, not just a count.
+class _StackedModelIcons extends StatelessWidget {
+  const _StackedModelIcons({required this.models});
 
-  final String label;
-  final bool active;
-  final VoidCallback onTap;
+  final List<AiModel> models;
+
+  static const double _size = 20;
+  static const double _step = 13; // horizontal overlap between coins
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 150),
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
-        decoration: BoxDecoration(
-          color: active ? context.cBg : Colors.transparent,
-          borderRadius: BorderRadius.circular(16),
-          boxShadow: active
-              ? [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.08),
-                    blurRadius: 4,
-                    offset: const Offset(0, 1),
+    final visible = models.take(3).toList();
+    final extra = models.length - visible.length;
+    final itemCount = visible.length + (extra > 0 ? 1 : 0);
+
+    return SizedBox(
+      height: _size,
+      width: _step * (itemCount - 1) + _size,
+      child: Stack(
+        children: [
+          for (var i = 0; i < visible.length; i++)
+            Positioned(
+              left: i * _step,
+              child: _ModelCoin(
+                child: CatalogVisuals.modelAvatar(
+                  visible[i].externalId,
+                  size: 11,
+                ),
+              ),
+            ),
+          if (extra > 0)
+            Positioned(
+              left: visible.length * _step,
+              child: _ModelCoin(
+                child: Text(
+                  '+$extra',
+                  style: const TextStyle(
+                    color: Colors.black87,
+                    fontSize: 9,
+                    fontWeight: FontWeight.w700,
                   ),
-                ]
-              : null,
-        ),
-        child: Text(
-          label,
-          style: TextStyle(
-            fontSize: 12,
-            fontWeight: FontWeight.w600,
-            color: active ? context.cFg : context.cMuted.withValues(alpha: 0.8),
-          ),
-        ),
+                ),
+              ),
+            ),
+        ],
       ),
+    );
+  }
+}
+
+/// One coin of the stacked cluster: a white circle ringed in the composer
+/// surface colour so overlapping coins read as separate discs.
+class _ModelCoin extends StatelessWidget {
+  const _ModelCoin({required this.child});
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: _StackedModelIcons._size,
+      height: _StackedModelIcons._size,
+      decoration: BoxDecoration(
+        color: Colors.white,
+        shape: BoxShape.circle,
+        border: Border.all(color: context.cCard, width: 1.5),
+      ),
+      child: Center(child: child),
     );
   }
 }
@@ -667,7 +651,6 @@ class _ComposerMenu extends StatelessWidget {
                         (m) => _ModelRow(
                           model: m,
                           selected: state.selectedModelIds.contains(m.id),
-                          singleMode: !state.multiMode,
                         ),
                       ),
                   ],
@@ -795,12 +778,10 @@ class _ModelRow extends StatelessWidget {
   const _ModelRow({
     required this.model,
     required this.selected,
-    required this.singleMode,
   });
 
   final AiModel model;
   final bool selected;
-  final bool singleMode;
 
   @override
   Widget build(BuildContext context) {
@@ -808,11 +789,11 @@ class _ModelRow extends StatelessWidget {
     return Material(
       color: Colors.transparent,
       child: InkWell(
-        onTap: () {
-          context.read<ChatBloc>().add(ChatToggleModel(model.id));
-          // Single mode is a pick-and-go selection.
-          if (singleMode) Navigator.pop(context);
-        },
+        // Toggling a model in/out just updates the selection; the sheet stays
+        // open so the user can pick several (which turns on multi mode). They
+        // dismiss the sheet themselves when done.
+        onTap: () =>
+            context.read<ChatBloc>().add(ChatToggleModel(model.id)),
         borderRadius: BorderRadius.circular(12),
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),

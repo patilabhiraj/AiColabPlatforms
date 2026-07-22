@@ -180,21 +180,22 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
     final current = state as ChatLoaded;
     final selected = List<int>.from(current.selectedModelIds);
 
-    if (!current.multiMode) {
-      // Single mode: clicking any model switches to it.
-      emit(current.copyWith(selectedModelIds: [event.modelId]));
-      return;
-    }
-
+    // There is no separate Single/Multi switch anymore — the mode is derived
+    // from how many models are selected. Tapping a model toggles it in/out of
+    // the selection (never dropping below one), and multiMode follows the count.
     if (selected.contains(event.modelId)) {
-      if (selected.length > 1) {
-        selected.remove(event.modelId);
-        emit(current.copyWith(selectedModelIds: selected));
-      }
+      // Removing — keep at least one model selected.
+      if (selected.length > 1) selected.remove(event.modelId);
     } else {
       selected.add(event.modelId);
-      emit(current.copyWith(selectedModelIds: selected));
     }
+
+    emit(
+      current.copyWith(
+        selectedModelIds: selected,
+        multiMode: selected.length > 1,
+      ),
+    );
   }
 
   void _onSetCapability(ChatSetCapability event, Emitter<ChatState> emit) {

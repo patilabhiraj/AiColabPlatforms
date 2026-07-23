@@ -45,7 +45,8 @@ dependencies:
   flutter_svg: ^2.3.0
   image_picker: ^1.1.2
   intl: ^0.20.2
-  lottie: ^3.5.1
+  lottie: ^3.3.3
+  flutter_cashfree_pg_sdk: ^2.4.0+52
 
 dev_dependencies:
   flutter_test:

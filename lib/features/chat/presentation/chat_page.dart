@@ -267,37 +267,6 @@ class _ChatPageState extends State<ChatPage> {
             ),
             
             // ═══════════════════════════════════════════════════════════════
-            // TOP GLASSMORPHISM - smooth frosted glass effect over status bar
-            // Strong blur for premium feel, subtle gradient fade for readability
-            // ═══════════════════════════════════════════════════════════════
-            Positioned(
-              top: 0,
-              left: 0,
-              right: 0,
-              height: 30,
-              child: IgnorePointer(
-                child: ClipRect(
-                  child: BackdropFilter(
-                    filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-                    child: Container(
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          begin: Alignment.topCenter,
-                          end: Alignment.bottomCenter,
-                          colors: [
-                            context.cBg.withValues(alpha: 0.25),
-                            context.cBg.withValues(alpha: 0.05),
-                          ],
-                          stops: const [0.0, 1.0],
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            ),
-
-            // ═══════════════════════════════════════════════════════════════
             // FLOATING ACTION BUTTONS - Always visible (menu + add/profile)
             // These are the ONLY permanently visible elements, NOT a header bar
             // Positioned at top corners, matching ChatGPT iOS exactly

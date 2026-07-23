@@ -188,6 +188,9 @@ class CatalogVisuals {
     'moonshotai': Color(0xFF6E56CF),
     'perplexity': Color(0xFF20B8CD),
     'x-ai': Color(0xFFD4D4D8),
+    'poolside': Color(0xFF6366F1),
+    'cohere': Color(0xFFD18EE2),
+    'nvidia': Color(0xFF76B900),
   };
 
   static String _providerKey(String externalId) {
@@ -230,6 +233,15 @@ class CatalogVisuals {
       case 'x-ai':
         return Icons.bolt_rounded;
 
+      case 'poolside':
+        return Icons.pool_rounded;
+
+      case 'cohere':
+        return Icons.hub_rounded;
+
+      case 'nvidia':
+        return Icons.memory_rounded;
+
       default:
         return Icons.smart_toy_rounded;
     }
@@ -265,6 +277,18 @@ class CatalogVisuals {
 
     if (lower.startsWith('x-ai')) {
       return 'assets/modeIcons/xai.svg';
+    }
+
+    if (lower.startsWith('poolside')) {
+      return 'assets/modeIcons/poolside.svg';
+    }
+
+    if (lower.startsWith('cohere')) {
+      return 'assets/modeIcons/cohere.svg';
+    }
+
+    if (lower.startsWith('nvidia')) {
+      return 'assets/modeIcons/nvidia.svg';
     }
 
     return null;

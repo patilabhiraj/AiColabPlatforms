@@ -1,5 +1,6 @@
 abstract final class ApiConstants {
-  static const String baseUrl = 'https://ai-colab-chat-manan-backend.onrender.com';
+  static const String baseUrl = 'https://98fb9zw4-5000.inc1.devtunnels.ms';
+  // static const String baseUrl = 'https://ai-colab-chat-manan-backend.onrender.com';
 
   // ── Auth ─────────────────────────────────────────────────────────────────────
   static const String login            = '/api/auth/login';

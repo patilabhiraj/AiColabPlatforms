@@ -34,6 +34,28 @@ class _SubscriptionView extends StatelessWidget {
               SnackBar(content: Text(state.cancelError!)),
             );
           }
+
+          // ── Payment Success ───────────────────────────────────────────────
+          if (state is PaymentSuccess) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('🎉 Payment Successful! Order ID: ${state.orderId}'),
+                backgroundColor: const Color(0xFF10B981),
+                duration: const Duration(seconds: 4),
+              ),
+            );
+          }
+
+          // ── Payment Failure ───────────────────────────────────────────────
+          if (state is PaymentFailure) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('❌ ${state.message}'),
+                backgroundColor: context.cError,
+                duration: const Duration(seconds: 4),
+              ),
+            );
+          }
         },
         builder: (context, state) {
           if (state is SubscriptionLoading || state is SubscriptionInitial) {
@@ -48,7 +70,16 @@ class _SubscriptionView extends StatelessWidget {
             );
           }
 
-          final loaded = state as SubscriptionLoaded;
+          // If payment flow state is active, keep displaying current loaded plans
+          SubscriptionLoaded? loaded;
+          if (state is SubscriptionLoaded) {
+            loaded = state;
+          }
+
+          if (loaded == null) {
+            return const SettingsStateView.loading();
+          }
+
           final subscription = loaded.summary.subscription;
 
           return ListView(
@@ -83,8 +114,10 @@ class _SubscriptionView extends StatelessWidget {
                     plan: plan,
                     isCurrent: subscription?.planId == plan.id,
                     isFreeTaken: plan.monthlyPrice == 0 &&
-                        loaded.summary.freePlanTaken &&
+                        loaded!.summary.freePlanTaken &&
                         subscription?.planId != plan.id,
+                    isPurchasing: loaded!.paymentInitiating &&
+                        loaded.purchasingPlanId == plan.id,
                   )),
             ],
           );
@@ -218,11 +251,13 @@ class _PlanTile extends StatelessWidget {
     required this.plan,
     required this.isCurrent,
     required this.isFreeTaken,
+    this.isPurchasing = false,
   });
 
   final PlanEntity plan;
   final bool isCurrent;
   final bool isFreeTaken;
+  final bool isPurchasing;
 
   @override
   Widget build(BuildContext context) {
@@ -281,27 +316,45 @@ class _PlanTile extends StatelessWidget {
               ),
             const SizedBox(height: 12),
             if (isCurrent)
-              _Badge(label: 'Current plan', color: AppColors.landingPrimary)
+              const _Badge(label: 'Current plan', color: AppColors.landingPrimary)
             else if (isFreeTaken)
               _Badge(label: 'Already taken', color: context.cMuted)
             else
               SizedBox(
                 width: double.infinity,
-                child: OutlinedButton(
-                  onPressed: () {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text(
-                          'Please upgrade or subscribe from the web app to complete payment.',
-                        ),
-                      ),
-                    );
-                  },
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: AppColors.landingPrimary,
-                    side: const BorderSide(color: AppColors.landingPrimary),
+                child: ElevatedButton(
+                  onPressed: isPurchasing
+                      ? null
+                      : () {
+                          // BLoC ला plan purchase करण्यासाठी event पाठवतो
+                          context.read<SubscriptionBloc>().add(
+                                SubscriptionPurchaseRequested(plan.id),
+                              );
+                        },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.landingPrimary,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
                   ),
-                  child: Text(isFree ? 'Start Free' : 'Upgrade from web'),
+                  child: isPurchasing
+                      ? const SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2.5,
+                            color: Colors.white,
+                          ),
+                        )
+                      : Text(
+                          isFree ? 'Start Free' : 'Subscribe with Cashfree',
+                          style: const TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 14,
+                          ),
+                        ),
                 ),
               ),
           ],
@@ -333,3 +386,4 @@ class _Badge extends StatelessWidget {
     );
   }
 }
+

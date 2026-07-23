@@ -37,6 +37,7 @@ import '../features/settings/bloc/preferences/preferences_bloc.dart';
 import '../features/settings/bloc/subscription/subscription_bloc.dart';
 import '../features/settings/bloc/usage/usage_bloc.dart';
 import '../features/settings/bloc/wallet/wallet_bloc.dart';
+import '../features/settings/cashfree_service.dart';
 import '../features/settings/data/datasources/settings_remote_data_source.dart';
 import '../features/settings/data/repositories/settings_repository_impl.dart';
 import '../features/settings/domain/repositories/settings_repository.dart';
@@ -107,6 +108,9 @@ void init() {
   sl.registerLazySingleton(() => GetCurrentSubscriptionUseCase(sl()));
   sl.registerLazySingleton(() => GetPlansUseCase(sl()));
   sl.registerLazySingleton(() => CancelSubscriptionUseCase(sl()));
+  // नवीन: Payment साठी
+  sl.registerLazySingleton(() => CreateSubscriptionUseCase(sl()));
+  sl.registerLazySingleton(() => CashfreeService());
   sl.registerLazySingleton(() => GetProfileUseCase(sl()));
   sl.registerLazySingleton(() => UpdateProfileUseCase(sl()));
   sl.registerLazySingleton(() => DeleteAccountUseCase(sl()));
@@ -123,7 +127,7 @@ void init() {
   sl.registerFactory(() => DashboardBloc(sl()));
   sl.registerFactory(() => WalletBloc(sl(), sl()));
   sl.registerFactory(() => UsageBloc(sl()));
-  sl.registerFactory(() => SubscriptionBloc(sl(), sl(), sl()));
+  sl.registerFactory(() => SubscriptionBloc(sl(), sl(), sl(), sl(), sl()));
   sl.registerFactory(() => AccountBloc(sl(), sl(), sl()));
   sl.registerFactory(() => PreferencesBloc(sl(), sl()));
   sl.registerFactory(() => ArchivedChatsBloc(sl(), sl()));

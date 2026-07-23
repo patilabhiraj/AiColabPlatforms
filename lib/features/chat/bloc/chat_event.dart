@@ -108,3 +108,20 @@ class ChatModelDone extends ChatEvent {
   final String? errorContent;
   ChatModelDone(this.messageId, this.modelId, {this.failed = false, this.errorContent});
 }
+
+// ── Contexts ──────────────────────────────────────────────────────────────
+
+/// Fetch sidebar user contexts from /api/contexts/sidebar.
+class ChatLoadContexts extends ChatEvent {}
+
+/// Toggle a context's active state locally (no API call in phase 1).
+class ChatToggleContext extends ChatEvent {
+  final String contextId;
+  ChatToggleContext(this.contextId);
+}
+
+/// Delete a user context via /api/contexts/{id}.
+class ChatDeleteContext extends ChatEvent {
+  final String contextId;
+  ChatDeleteContext(this.contextId);
+}

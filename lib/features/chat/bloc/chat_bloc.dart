@@ -10,6 +10,7 @@ import '../domain/entities/chat_conversation.dart';
 import '../domain/entities/chat_message.dart';
 import '../domain/entities/model_response.dart';
 import '../domain/entities/multi_model.dart';
+import '../domain/entities/user_context.dart';
 import '../domain/repositories/chat_repository.dart';
 import '../domain/usecases/create_conversation_usecase.dart';
 import '../domain/usecases/get_assistants_usecase.dart';
@@ -59,6 +60,10 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
     on<ChatSelectModelTab>(_onSelectModelTab);
     on<ChatModelChunk>(_onModelChunk);
     on<ChatModelDone>(_onModelDone);
+    // ── Context handlers ────────────────────────────────────────────────
+    on<ChatLoadContexts>(_onLoadContexts);
+    on<ChatToggleContext>(_onToggleContext);
+    on<ChatDeleteContext>(_onDeleteContext);
   }
 
   void _onClearSendError(ChatClearSendError event, Emitter<ChatState> emit) {
@@ -86,8 +91,11 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
         ),
       ),
     );
-    // Load models + assistants in the background once the chat shell is ready.
-    if (state is ChatLoaded) add(ChatLoadCatalog());
+    // Load models + assistants + contexts in the background once the chat shell is ready.
+    if (state is ChatLoaded) {
+      add(ChatLoadCatalog());
+      add(ChatLoadContexts());
+    }
   }
 
   static const int _conversationsPageSize = 5;
@@ -970,5 +978,63 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
     }
     
     return questions;
+  }
+
+  // ── Context handlers ───────────────────────────────────────────────────────
+
+  Future<void> _onLoadContexts(
+    ChatLoadContexts event,
+    Emitter<ChatState> emit,
+  ) async {
+    if (state is! ChatLoaded) return;
+    final result = await _repository.getSidebarContexts();
+    if (state is! ChatLoaded) return;
+    result.fold(
+      (_) {}, // silently ignore: sidebar is non-critical
+      (contexts) {
+        final current = state as ChatLoaded;
+        // Auto-activate all contexts on first load
+        final activeIds = current.activeContextIds.isEmpty
+            ? contexts.map((c) => c.id).toSet()
+            : current.activeContextIds;
+        emit(current.copyWith(
+          sidebarContexts: contexts,
+          activeContextIds: activeIds,
+        ));
+      },
+    );
+  }
+
+  void _onToggleContext(
+    ChatToggleContext event,
+    Emitter<ChatState> emit,
+  ) {
+    if (state is! ChatLoaded) return;
+    final current = state as ChatLoaded;
+    final updated = Set<String>.from(current.activeContextIds);
+    if (updated.contains(event.contextId)) {
+      updated.remove(event.contextId);
+    } else {
+      updated.add(event.contextId);
+    }
+    emit(current.copyWith(activeContextIds: updated));
+  }
+
+  Future<void> _onDeleteContext(
+    ChatDeleteContext event,
+    Emitter<ChatState> emit,
+  ) async {
+    if (state is! ChatLoaded) return;
+    final current = state as ChatLoaded;
+    await _repository.deleteContext(event.contextId);
+    final updatedContexts = current.sidebarContexts
+        .where((c) => c.id != event.contextId)
+        .toList();
+    final updatedActive = Set<String>.from(current.activeContextIds)
+      ..remove(event.contextId);
+    emit(current.copyWith(
+      sidebarContexts: updatedContexts,
+      activeContextIds: updatedActive,
+    ));
   }
 }

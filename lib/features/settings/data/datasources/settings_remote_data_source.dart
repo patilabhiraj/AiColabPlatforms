@@ -28,6 +28,8 @@ abstract class SettingsRemoteDataSource {
   Future<SubscriptionSummaryModel> getCurrentSubscription();
   Future<List<PlanModel>> getPlans();
   Future<void> cancelSubscription();
+  // Calls backend → backend calls Cashfree → returns orderId + paymentSessionId
+  Future<Map<String, dynamic>> createSubscription(int planId);
 
   Future<AccountModel> getProfile();
   Future<AccountModel> updateProfile({
@@ -143,6 +145,19 @@ class SettingsRemoteDataSourceImpl implements SettingsRemoteDataSource {
   }
 
   @override
+  Future<Map<String, dynamic>> createSubscription(int planId) async {
+    // Step 1: Backend ला POST request पाठवतो with planId
+    // Step 2: Backend internally Cashfree API call करतो (Secret Key वापरून)
+    // Step 3: Backend आपल्याला orderId + paymentSessionId परत देतो
+    final response = await dio.post(
+      ApiConstants.subscriptionCreate,
+      data: {'planId': planId},
+    );
+    // Backend response: { success: true, data: { orderId, paymentSessionId } }
+    return (response.data['data'] as Map<String, dynamic>?) ?? {};
+  }
+
+  @override
   Future<AccountModel> getProfile() async {
     final response = await dio.get(ApiConstants.userProfile);
     return AccountModel.fromJson(_unwrap(response));
@@ -158,7 +173,7 @@ class SettingsRemoteDataSourceImpl implements SettingsRemoteDataSource {
     final formData = FormData.fromMap({
       'firstName': firstName,
       'lastName': lastName,
-      if (phoneNumber != null) 'phoneNumber': phoneNumber,
+      'phoneNumber': ?phoneNumber,
       if (profileImagePath != null)
         'profileImage': await MultipartFile.fromFile(profileImagePath),
     });

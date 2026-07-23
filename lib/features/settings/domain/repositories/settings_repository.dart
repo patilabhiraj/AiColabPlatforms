@@ -28,6 +28,8 @@ abstract class SettingsRepository {
   Future<Either<Failure, SubscriptionSummaryEntity>> getCurrentSubscription();
   Future<Either<Failure, List<PlanEntity>>> getPlans();
   Future<Either<Failure, void>> cancelSubscription();
+  // Returns { orderId, paymentSessionId } from Cashfree via backend
+  Future<Either<Failure, Map<String, dynamic>>> createSubscription(int planId);
 
   Future<Either<Failure, AccountEntity>> getProfile();
   Future<Either<Failure, AccountEntity>> updateProfile({

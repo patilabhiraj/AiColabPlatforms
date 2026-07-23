@@ -107,6 +107,19 @@ class SettingsRepositoryImpl implements SettingsRepository {
   }
 
   @override
+  Future<Either<Failure, Map<String, dynamic>>> createSubscription(
+    int planId,
+  ) async {
+    try {
+      // DataSource ला call करतो → तो backend ला call करतो → orderId + sessionId मिळतात
+      final data = await remoteDataSource.createSubscription(planId);
+      return Right(data);
+    } catch (e) {
+      return _handleError(e);
+    }
+  }
+
+  @override
   Future<Either<Failure, AccountEntity>> getProfile() async {
     try {
       return Right(await remoteDataSource.getProfile());

@@ -2,6 +2,11 @@ import 'package:flutter/material.dart';
 import '../../../../../core/theme/app_colors.dart';
 import 'section_header.dart';
 
+/// Projects section in the sidebar drawer.
+///
+/// Currently shows a clean empty state while the backend projects API is
+/// not yet available. The structure is ready to plug real data in once
+/// a projects repository is wired.
 class ProjectsSection extends StatelessWidget {
   const ProjectsSection({
     super.key,
@@ -17,6 +22,7 @@ class ProjectsSection extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16),
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           SectionHeader(
             title: 'PROJECTS',
@@ -32,7 +38,9 @@ class ProjectsSection extends StatelessWidget {
                 ),
                 const SizedBox(width: 8),
                 Icon(
-                  isExpanded ? Icons.keyboard_arrow_down_rounded : Icons.keyboard_arrow_right_rounded,
+                  isExpanded
+                      ? Icons.keyboard_arrow_down_rounded
+                      : Icons.keyboard_arrow_right_rounded,
                   size: 20,
                   color: context.cMuted.withValues(alpha: 0.6),
                 ),
@@ -41,12 +49,7 @@ class ProjectsSection extends StatelessWidget {
           ),
           if (isExpanded) ...[
             const SizedBox(height: 8),
-            _ProjectItem(
-              icon: Icons.folder_outlined,
-              title: 'Restaurant',
-              onTap: () {},
-              onMore: () {},
-            ),
+            _ProjectsEmptyState(),
           ],
         ],
       ),
@@ -54,66 +57,28 @@ class ProjectsSection extends StatelessWidget {
   }
 }
 
-class _ProjectItem extends StatelessWidget {
-  const _ProjectItem({
-    required this.icon,
-    required this.title,
-    required this.onTap,
-    required this.onMore,
-  });
-
-  final IconData icon;
-  final String title;
-  final VoidCallback onTap;
-  final VoidCallback onMore;
-
+// ── Empty state ───────────────────────────────────────────────────────────────
+class _ProjectsEmptyState extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(8),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-          child: Row(
-            children: [
-              Icon(
-                icon,
-                size: 18,
-                color: context.cMuted.withValues(alpha: 0.7),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Text(
-                  title,
-                  style: TextStyle(
-                    color: context.cFg.withValues(alpha: 0.85),
-                    fontSize: 15,
-                    fontWeight: FontWeight.w400,
-                  ),
-                ),
-              ),
-              Icon(
-                Icons.chevron_right_rounded,
-                size: 18,
-                color: context.cMuted.withValues(alpha: 0.5),
-              ),
-              const SizedBox(width: 4),
-              GestureDetector(
-                onTap: onMore,
-                child: Padding(
-                  padding: const EdgeInsets.all(4),
-                  child: Icon(
-                    Icons.more_horiz_rounded,
-                    size: 18,
-                    color: context.cMuted.withValues(alpha: 0.6),
-                  ),
-                ),
-              ),
-            ],
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 4),
+      child: Row(
+        children: [
+          Icon(
+            Icons.folder_off_outlined,
+            size: 15,
+            color: context.cMuted.withValues(alpha: 0.5),
           ),
-        ),
+          const SizedBox(width: 8),
+          Text(
+            'No projects yet',
+            style: TextStyle(
+              color: context.cMuted.withValues(alpha: 0.55),
+              fontSize: 13,
+            ),
+          ),
+        ],
       ),
     );
   }

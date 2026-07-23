@@ -46,6 +46,13 @@ class ChatLoaded extends ChatState {
   final List<Assistant> assistants;
   final Assistant? selectedAssistant;
 
+  // ── User Contexts (sidebar) ───────────────────────────────────────────────
+  /// Contexts fetched from /api/contexts/sidebar.
+  final List<UserContext> sidebarContexts;
+
+  /// IDs of contexts the user has toggled ON locally.
+  final Set<String> activeContextIds;
+
   ChatLoaded({
     required this.conversations,
     this.selectedConversation,
@@ -64,6 +71,8 @@ class ChatLoaded extends ChatState {
     this.multiMode = false,
     this.assistants = const [],
     this.selectedAssistant,
+    this.sidebarContexts = const [],
+    this.activeContextIds = const {},
   });
 
   bool get isStreaming => streamingContent != null;
@@ -90,6 +99,8 @@ class ChatLoaded extends ChatState {
     List<Assistant>? assistants,
     Assistant? selectedAssistant,
     bool clearAssistant = false,
+    List<UserContext>? sidebarContexts,
+    Set<String>? activeContextIds,
   }) {
     return ChatLoaded(
       conversations: conversations ?? this.conversations,
@@ -113,6 +124,8 @@ class ChatLoaded extends ChatState {
       assistants: assistants ?? this.assistants,
       selectedAssistant:
           clearAssistant ? null : (selectedAssistant ?? this.selectedAssistant),
+      sidebarContexts: sidebarContexts ?? this.sidebarContexts,
+      activeContextIds: activeContextIds ?? this.activeContextIds,
     );
   }
 

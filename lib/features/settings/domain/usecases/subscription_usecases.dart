@@ -30,3 +30,15 @@ class CancelSubscriptionUseCase {
     return repository.cancelSubscription();
   }
 }
+
+/// User plan select करतो → हा UseCase backend ला call करतो
+/// → backend Cashfree ला call करतो → orderId + paymentSessionId येतो
+/// → Flutter SDK हे वापरून payment sheet उघडतो
+class CreateSubscriptionUseCase {
+  final SettingsRepository repository;
+  CreateSubscriptionUseCase(this.repository);
+
+  Future<Either<Failure, Map<String, dynamic>>> call(int planId) {
+    return repository.createSubscription(planId);
+  }
+}

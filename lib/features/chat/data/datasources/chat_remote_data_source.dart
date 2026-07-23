@@ -37,7 +37,10 @@ abstract class ChatRemoteDataSource {
   // ── Multi-model send ──────────────────────────────────────────────────────
   /// Persists the user message + a shared assistant message, returning their
   /// ids. Call before fanning out one [sendMessageStreamForModel] per model.
-  Future<PrepareMultiResult> prepareMulti(String conversationId, String content);
+  Future<PrepareMultiResult> prepareMulti(
+    String conversationId,
+    String content,
+  );
 
   /// Streams a single model's answer for [modelId]. When [userMessageId] /
   /// [assistantMessageId] are non-zero the backend appends to those shared
@@ -77,11 +80,20 @@ abstract class ChatRemoteDataSource {
 
   // ── Message actions (streaming) ───────────────────────────────────────────
   Stream<String> regenerateMessage(String chatId, String messageId);
-  Stream<String> editMessage(String chatId, String messageId, String newContent);
+  Stream<String> editMessage(
+    String chatId,
+    String messageId,
+    String newContent,
+  );
   Stream<String> continueChat(String chatId);
 
   // ── Feedback ──────────────────────────────────────────────────────────────
-  Future<void> submitFeedback(String chatId, String responseId, bool isPositive, {String? comment});
+  Future<void> submitFeedback(
+    String chatId,
+    String responseId,
+    bool isPositive, {
+    String? comment,
+  });
 
   // ── Shared chat ───────────────────────────────────────────────────────────
   Future<SharedChatModel> getSharedChat(String shareId);
@@ -89,9 +101,18 @@ abstract class ChatRemoteDataSource {
   // ── User Contexts ─────────────────────────────────────────────────────────
   Future<List<UserContextModel>> getSidebarContexts();
   Future<List<UserContextModel>> listContexts();
-  Future<UserContextModel> createContext(String name, String content, String role);
+  Future<UserContextModel> createContext(
+    String name,
+    String content,
+    String role,
+  );
   Future<UserContextModel> getContextById(String id);
-  Future<UserContextModel> updateContext(String id, String name, String content, String role);
+  Future<UserContextModel> updateContext(
+    String id,
+    String name,
+    String content,
+    String role,
+  );
   Future<void> deleteContext(String id);
 }
 
@@ -104,11 +125,13 @@ class ChatRemoteDataSourceImpl implements ChatRemoteDataSource {
   Future<List<ChatConversationModel>> getConversations() async {
     try {
       final response = await dio.get(ApiConstants.chats);
-
       if (response.statusCode == 200) {
         final data = _parseListResponse(response.data);
         return data
-            .map((json) => ChatConversationModel.fromJson(json as Map<String, dynamic>))
+            .map(
+              (json) =>
+                  ChatConversationModel.fromJson(json as Map<String, dynamic>),
+            )
             .toList();
       } else {
         throw ServerException(
@@ -121,9 +144,7 @@ class ChatRemoteDataSourceImpl implements ChatRemoteDataSource {
           message: e.response?.data['message'] ?? 'Server error occurred',
         );
       } else {
-        throw ServerException(
-          message: e.message ?? 'Network error occurred',
-        );
+        throw ServerException(message: e.message ?? 'Network error occurred');
       }
     } catch (e) {
       throw ServerException(message: 'Unexpected error: $e');
@@ -170,14 +191,14 @@ class ChatRemoteDataSourceImpl implements ChatRemoteDataSource {
     try {
       // The backend has no dedicated /messages route (returns 404); messages
       // are embedded in the chat-detail response at GET /api/chats/{id}.
-      final response = await dio.get(
-        ApiConstants.chatById(conversationId),
-      );
+      final response = await dio.get(ApiConstants.chatById(conversationId));
 
       if (response.statusCode == 200) {
         final data = _parseMessagesFromChat(response.data);
         return data
-            .map((json) => ChatMessageModel.fromJson(json as Map<String, dynamic>))
+            .map(
+              (json) => ChatMessageModel.fromJson(json as Map<String, dynamic>),
+            )
             .toList();
       } else {
         throw ServerException(
@@ -190,9 +211,7 @@ class ChatRemoteDataSourceImpl implements ChatRemoteDataSource {
           message: e.response?.data['message'] ?? 'Server error occurred',
         );
       } else {
-        throw ServerException(
-          message: e.message ?? 'Network error occurred',
-        );
+        throw ServerException(message: e.message ?? 'Network error occurred');
       }
     } catch (e) {
       throw ServerException(message: 'Unexpected error: $e');
@@ -200,7 +219,10 @@ class ChatRemoteDataSourceImpl implements ChatRemoteDataSource {
   }
 
   @override
-  Future<ChatMessageModel> sendMessage(String conversationId, String content) async {
+  Future<ChatMessageModel> sendMessage(
+    String conversationId,
+    String content,
+  ) async {
     try {
       // Send message with SSE response type
       final response = await dio.post(
@@ -215,25 +237,25 @@ class ChatRemoteDataSourceImpl implements ChatRemoteDataSource {
         // Parse SSE response
         final String responseText = response.data as String;
         logger.debug('SSE Response: $responseText');
-        
+
         // Extract message IDs and content from SSE stream
         String? assistantMessageId;
         final StringBuffer contentBuffer = StringBuffer();
-        
+
         // Parse SSE events
         final lines = responseText.split('\n');
         for (final line in lines) {
           if (line.startsWith('data: ')) {
             final dataStr = line.substring(6); // Remove 'data: ' prefix
-            
+
             if (dataStr == '[DONE]') {
               break;
             }
-            
+
             try {
               final data = jsonDecode(dataStr) as Map<String, dynamic>;
               final type = data['type'] as String?;
-              
+
               if (type == 'message_id') {
                 assistantMessageId = data['assistantMessageId']?.toString();
               } else if (type == 'token') {
@@ -247,24 +269,24 @@ class ChatRemoteDataSourceImpl implements ChatRemoteDataSource {
             }
           }
         }
-        
+
         String fullContent = contentBuffer.toString();
         logger.info('Received AI response: $fullContent');
-        
+
         // Clean up the content - remove ***json blocks and *** markers
         fullContent = _cleanResponseContent(fullContent);
-        
+
         // Create message model from parsed data
         return ChatMessageModel(
-          id: assistantMessageId ?? 'ai_${DateTime.now().millisecondsSinceEpoch}',
+          id:
+              assistantMessageId ??
+              'ai_${DateTime.now().millisecondsSinceEpoch}',
           content: fullContent,
           isUser: false,
           timestamp: DateTime.now(),
         );
       } else {
-        throw ServerException(
-          message: 'Failed to send message',
-        );
+        throw ServerException(message: 'Failed to send message');
       }
     } on DioException catch (e) {
       logger.error('DioException in sendMessage', e);
@@ -273,9 +295,7 @@ class ChatRemoteDataSourceImpl implements ChatRemoteDataSource {
           message: e.response?.data['message'] ?? 'Server error occurred',
         );
       } else {
-        throw ServerException(
-          message: e.message ?? 'Network error occurred',
-        );
+        throw ServerException(message: e.message ?? 'Network error occurred');
       }
     } catch (e) {
       logger.error('Unexpected error in sendMessage', e);
@@ -283,95 +303,97 @@ class ChatRemoteDataSourceImpl implements ChatRemoteDataSource {
     }
   }
 
-@override
-Stream<String> sendMessageStream(String conversationId, String content) async* {
-  try {
-    logger.info('Starting streaming message to conversation: $conversationId');
+  @override
+  Stream<String> sendMessageStream(
+    String conversationId,
+    String content,
+  ) async* {
+    try {
+      logger.info(
+        'Starting streaming message to conversation: $conversationId',
+      );
 
-    final response = await dio.post(
-      ApiConstants.chatSend(conversationId),
-      data: {'content': content},
-      options: Options(
-        responseType: ResponseType.stream,
-      ),
-    );
+      final response = await dio.post(
+        ApiConstants.chatSend(conversationId),
+        data: {'content': content},
+        options: Options(responseType: ResponseType.stream),
+      );
 
-    if (response.statusCode == 200 || response.statusCode == 201) {
-      final stream = (response.data as ResponseBody).stream;
-      final StringBuffer contentBuffer = StringBuffer();
-      String? messageId;
-      // Buffer for incomplete SSE lines split across network chunks
-      String partialLine = '';
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        final stream = (response.data as ResponseBody).stream;
+        final StringBuffer contentBuffer = StringBuffer();
+        String? messageId;
+        // Buffer for incomplete SSE lines split across network chunks
+        String partialLine = '';
 
-      final textStream = stream.cast<List<int>>().transform(utf8.decoder);
+        final textStream = stream.cast<List<int>>().transform(utf8.decoder);
 
-      await for (final chunk in textStream) {
-        final combined = partialLine + chunk;
-        final lines = combined.split('\n');
-        partialLine = lines.removeLast(); // last entry may be incomplete
+        await for (final chunk in textStream) {
+          final combined = partialLine + chunk;
+          final lines = combined.split('\n');
+          partialLine = lines.removeLast(); // last entry may be incomplete
 
-        for (final line in lines) {
-          if (!line.startsWith('data: ')) continue;
-          final dataStr = line.substring(6).trim();
+          for (final line in lines) {
+            if (!line.startsWith('data: ')) continue;
+            final dataStr = line.substring(6).trim();
 
-          if (dataStr == '[DONE]') {
-            logger.info('Stream complete');
-            return;
-          }
+            if (dataStr == '[DONE]') {
+              logger.info('Stream complete');
+              return;
+            }
 
-          try {
-            final data = jsonDecode(dataStr) as Map<String, dynamic>;
-            final type = data['type'] as String?;
+            try {
+              final data = jsonDecode(dataStr) as Map<String, dynamic>;
+              final type = data['type'] as String?;
 
-            if (type == 'message_id') {
-              messageId = data['assistantMessageId']?.toString();
-              logger.debug('Received message ID: $messageId');
-            } else if (type == 'token') {
-              final token = data['content'] as String?;
-              if (token != null) {
-                contentBuffer.write(token);
-                yield contentBuffer.toString();
+              if (type == 'message_id') {
+                messageId = data['assistantMessageId']?.toString();
+                logger.debug('Received message ID: $messageId');
+              } else if (type == 'token') {
+                final token = data['content'] as String?;
+                if (token != null) {
+                  contentBuffer.write(token);
+                  yield contentBuffer.toString();
+                }
               }
+            } catch (e) {
+              logger.debug('Failed to parse SSE line: $dataStr');
             }
-          } catch (e) {
-            logger.debug('Failed to parse SSE line: $dataStr');
           }
         }
-      }
 
-      // Process any remaining buffered line after stream ends
-      if (partialLine.startsWith('data: ')) {
-        final dataStr = partialLine.substring(6).trim();
-        if (dataStr != '[DONE]') {
-          try {
-            final data = jsonDecode(dataStr) as Map<String, dynamic>;
-            if (data['type'] == 'token') {
-              final token = data['content'] as String?;
-              if (token != null) contentBuffer.write(token);
-            }
-          } catch (_) {}
+        // Process any remaining buffered line after stream ends
+        if (partialLine.startsWith('data: ')) {
+          final dataStr = partialLine.substring(6).trim();
+          if (dataStr != '[DONE]') {
+            try {
+              final data = jsonDecode(dataStr) as Map<String, dynamic>;
+              if (data['type'] == 'token') {
+                final token = data['content'] as String?;
+                if (token != null) contentBuffer.write(token);
+              }
+            } catch (_) {}
+          }
         }
-      }
 
-      // Final cleanup yield if content was modified
-      final finalContent = _cleanResponseContent(contentBuffer.toString());
-      if (finalContent != contentBuffer.toString()) {
-        yield finalContent;
+        // Final cleanup yield if content was modified
+        final finalContent = _cleanResponseContent(contentBuffer.toString());
+        if (finalContent != contentBuffer.toString()) {
+          yield finalContent;
+        }
+      } else {
+        throw ServerException(message: 'Failed to send message');
       }
-
-    } else {
-      throw ServerException(message: 'Failed to send message');
+    } on DioException catch (e) {
+      logger.error('DioException in sendMessageStream', e);
+      throw ServerException(
+        message: e.response?.data['message'] ?? 'Server error occurred',
+      );
+    } catch (e) {
+      logger.error('Unexpected error in sendMessageStream', e);
+      throw ServerException(message: 'Unexpected error: $e');
     }
-  } on DioException catch (e) {
-    logger.error('DioException in sendMessageStream', e);
-    throw ServerException(
-      message: e.response?.data['message'] ?? 'Server error occurred',
-    );
-  } catch (e) {
-    logger.error('Unexpected error in sendMessageStream', e);
-    throw ServerException(message: 'Unexpected error: $e');
   }
-}
 
   // ── Multi-model send ──────────────────────────────────────────────────────
 
@@ -390,7 +412,8 @@ Stream<String> sendMessageStream(String conversationId, String content) async* {
         final data = (body['data'] ?? body) as Map<String, dynamic>;
         return PrepareMultiResult(
           userMessageId: (data['userMessageId'] as num?)?.toInt() ?? 0,
-          assistantMessageId: (data['assistantMessageId'] as num?)?.toInt() ?? 0,
+          assistantMessageId:
+              (data['assistantMessageId'] as num?)?.toInt() ?? 0,
         );
       }
       throw ServerException(message: 'Failed to prepare messages');
@@ -562,9 +585,7 @@ Stream<String> sendMessageStream(String conversationId, String content) async* {
           message: e.response?.data['message'] ?? 'Server error occurred',
         );
       } else {
-        throw ServerException(
-          message: e.message ?? 'Network error occurred',
-        );
+        throw ServerException(message: e.message ?? 'Network error occurred');
       }
     } catch (e) {
       throw ServerException(message: 'Unexpected error: $e');
@@ -589,9 +610,11 @@ Stream<String> sendMessageStream(String conversationId, String content) async* {
       }
       throw ServerException(message: 'Failed to fetch models');
     } on DioException catch (e) {
-      throw ServerException(message: e.response?.data is Map
-          ? (e.response?.data['message'] ?? 'Network error')
-          : (e.message ?? 'Network error'));
+      throw ServerException(
+        message: e.response?.data is Map
+            ? (e.response?.data['message'] ?? 'Network error')
+            : (e.message ?? 'Network error'),
+      );
     } catch (e) {
       throw ServerException(message: 'Unexpected error: $e');
     }
@@ -607,15 +630,19 @@ Stream<String> sendMessageStream(String conversationId, String content) async* {
       if (response.statusCode == 200) {
         final data = _parseListResponse(response.data);
         return data
-            .map((json) => AssistantModel.fromJson(json as Map<String, dynamic>))
+            .map(
+              (json) => AssistantModel.fromJson(json as Map<String, dynamic>),
+            )
             .where((a) => a.isActive)
             .toList();
       }
       throw ServerException(message: 'Failed to fetch assistants');
     } on DioException catch (e) {
-      throw ServerException(message: e.response?.data is Map
-          ? (e.response?.data['message'] ?? 'Network error')
-          : (e.message ?? 'Network error'));
+      throw ServerException(
+        message: e.response?.data is Map
+            ? (e.response?.data['message'] ?? 'Network error')
+            : (e.message ?? 'Network error'),
+      );
     } catch (e) {
       throw ServerException(message: 'Unexpected error: $e');
     }
@@ -624,9 +651,7 @@ Stream<String> sendMessageStream(String conversationId, String content) async* {
   @override
   Future<SharedChatModel> getSharedChat(String shareId) async {
     try {
-      final response = await dio.get(
-        '${ApiConstants.sharedChat}/$shareId',
-      );
+      final response = await dio.get('${ApiConstants.sharedChat}/$shareId');
 
       if (response.statusCode == 200) {
         return SharedChatModel.fromJson(response.data as Map<String, dynamic>);
@@ -641,9 +666,7 @@ Stream<String> sendMessageStream(String conversationId, String content) async* {
           message: e.response?.data['message'] ?? 'Server error occurred',
         );
       } else {
-        throw ServerException(
-          message: e.message ?? 'Network error occurred',
-        );
+        throw ServerException(message: e.message ?? 'Network error occurred');
       }
     } catch (e) {
       throw ServerException(message: 'Unexpected error: $e');
@@ -658,7 +681,10 @@ Stream<String> sendMessageStream(String conversationId, String content) async* {
       if (response.statusCode == 200) {
         final data = _parseListResponse(response.data);
         return data
-            .map((json) => ChatConversationModel.fromJson(json as Map<String, dynamic>))
+            .map(
+              (json) =>
+                  ChatConversationModel.fromJson(json as Map<String, dynamic>),
+            )
             .toList();
       } else {
         throw ServerException(
@@ -671,9 +697,7 @@ Stream<String> sendMessageStream(String conversationId, String content) async* {
           message: e.response?.data['message'] ?? 'Server error occurred',
         );
       } else {
-        throw ServerException(
-          message: e.message ?? 'Network error occurred',
-        );
+        throw ServerException(message: e.message ?? 'Network error occurred');
       }
     } catch (e) {
       throw ServerException(message: 'Unexpected error: $e');
@@ -703,9 +727,7 @@ Stream<String> sendMessageStream(String conversationId, String content) async* {
           message: e.response?.data['message'] ?? 'Server error occurred',
         );
       } else {
-        throw ServerException(
-          message: e.message ?? 'Network error occurred',
-        );
+        throw ServerException(message: e.message ?? 'Network error occurred');
       }
     } catch (e) {
       throw ServerException(message: 'Unexpected error: $e');
@@ -732,9 +754,7 @@ Stream<String> sendMessageStream(String conversationId, String content) async* {
           message: e.response?.data['message'] ?? 'Server error occurred',
         );
       } else {
-        throw ServerException(
-          message: e.message ?? 'Network error occurred',
-        );
+        throw ServerException(message: e.message ?? 'Network error occurred');
       }
     } catch (e) {
       throw ServerException(message: 'Unexpected error: $e');
@@ -764,9 +784,7 @@ Stream<String> sendMessageStream(String conversationId, String content) async* {
           message: e.response?.data['message'] ?? 'Server error occurred',
         );
       } else {
-        throw ServerException(
-          message: e.message ?? 'Network error occurred',
-        );
+        throw ServerException(message: e.message ?? 'Network error occurred');
       }
     } catch (e) {
       throw ServerException(message: 'Unexpected error: $e');
@@ -789,9 +807,7 @@ Stream<String> sendMessageStream(String conversationId, String content) async* {
           message: e.response?.data['message'] ?? 'Server error occurred',
         );
       } else {
-        throw ServerException(
-          message: e.message ?? 'Network error occurred',
-        );
+        throw ServerException(message: e.message ?? 'Network error occurred');
       }
     } catch (e) {
       throw ServerException(message: 'Unexpected error: $e');
@@ -806,7 +822,9 @@ Stream<String> sendMessageStream(String conversationId, String content) async* {
       if (response.statusCode == 200) {
         final data = _parseListResponse(response.data);
         return data
-            .map((json) => ChatContextModel.fromJson(json as Map<String, dynamic>))
+            .map(
+              (json) => ChatContextModel.fromJson(json as Map<String, dynamic>),
+            )
             .toList();
       } else {
         throw ServerException(
@@ -819,9 +837,7 @@ Stream<String> sendMessageStream(String conversationId, String content) async* {
           message: e.response?.data['message'] ?? 'Server error occurred',
         );
       } else {
-        throw ServerException(
-          message: e.message ?? 'Network error occurred',
-        );
+        throw ServerException(message: e.message ?? 'Network error occurred');
       }
     } catch (e) {
       throw ServerException(message: 'Unexpected error: $e');
@@ -829,13 +845,14 @@ Stream<String> sendMessageStream(String conversationId, String content) async* {
   }
 
   @override
-  Future<void> replaceChatContexts(String id, List<ChatContextModel> contexts) async {
+  Future<void> replaceChatContexts(
+    String id,
+    List<ChatContextModel> contexts,
+  ) async {
     try {
       final response = await dio.put(
         ApiConstants.chatContexts(id),
-        data: {
-          'contexts': contexts.map((c) => c.toJson()).toList(),
-        },
+        data: {'contexts': contexts.map((c) => c.toJson()).toList()},
       );
 
       if (response.statusCode != 200 && response.statusCode != 204) {
@@ -849,9 +866,7 @@ Stream<String> sendMessageStream(String conversationId, String content) async* {
           message: e.response?.data['message'] ?? 'Server error occurred',
         );
       } else {
-        throw ServerException(
-          message: e.message ?? 'Network error occurred',
-        );
+        throw ServerException(message: e.message ?? 'Network error occurred');
       }
     } catch (e) {
       throw ServerException(message: 'Unexpected error: $e');
@@ -896,128 +911,137 @@ Stream<String> sendMessageStream(String conversationId, String content) async* {
   /// Clean response content by removing ***json blocks and *** markers
   /// Clean response content and extract suggested questions
   /// Returns a map with 'content' and 'questions' keys
-Map<String, dynamic> _cleanResponseContentAndExtractQuestions(String content) {
-  logger.debug('Original content length: ${content.length}');
-  
-  final originalContent = content;
-  List<String> suggestedQuestions = [];
+  Map<String, dynamic> _cleanResponseContentAndExtractQuestions(
+    String content,
+  ) {
+    logger.debug('Original content length: ${content.length}');
 
-  // Step 1: Extract JSON arrays with questions before removing them
-  final jsonArrayPattern = RegExp(r'\[\s*"([^"]*)"(?:\s*,\s*"([^"]*)")*\s*\]', multiLine: true);
-  final matches = jsonArrayPattern.allMatches(content);
-  
-  for (final match in matches) {
-    try {
-      final jsonStr = match.group(0);
-      if (jsonStr != null) {
-        final decoded = jsonDecode(jsonStr);
-        if (decoded is List) {
-          suggestedQuestions.addAll(decoded.map((e) => e.toString()));
+    final originalContent = content;
+    List<String> suggestedQuestions = [];
+
+    // Step 1: Extract JSON arrays with questions before removing them
+    final jsonArrayPattern = RegExp(
+      r'\[\s*"([^"]*)"(?:\s*,\s*"([^"]*)")*\s*\]',
+      multiLine: true,
+    );
+    final matches = jsonArrayPattern.allMatches(content);
+
+    for (final match in matches) {
+      try {
+        final jsonStr = match.group(0);
+        if (jsonStr != null) {
+          final decoded = jsonDecode(jsonStr);
+          if (decoded is List) {
+            suggestedQuestions.addAll(decoded.map((e) => e.toString()));
+          }
         }
+      } catch (e) {
+        logger.debug('Failed to parse JSON array: ${match.group(0)}');
       }
-    } catch (e) {
-      logger.debug('Failed to parse JSON array: ${match.group(0)}');
     }
+
+    // Step 2: Remove ```json ... ``` blocks
+    content = content.replaceAll(
+      RegExp(r'```json[\s\S]*?```', multiLine: true),
+      '',
+    );
+
+    // Step 3: Remove ***json ... *** blocks
+    content = content.replaceAll(
+      RegExp(r'\*\*\*json[\s\S]*?\*\*\*', multiLine: true),
+      '',
+    );
+
+    // Step 4: Remove any remaining ``` code blocks
+    content = content.replaceAll(
+      RegExp(r'```[\s\S]*?```', multiLine: true),
+      '',
+    );
+
+    // Step 5: Remove standalone JSON arrays
+    content = content.replaceAll(
+      RegExp(r'\[\s*"[^"]*"(?:\s*,\s*"[^"]*")*\s*\]', multiLine: true),
+      '',
+    );
+
+    // Step 6: Remove lines that start with "***json" or end with "***"
+    content = content.replaceAll(
+      RegExp(r'^.*\*\*\*json.*$', multiLine: true),
+      '',
+    );
+    content = content.replaceAll(RegExp(r'^.*\*\*\*\s*$', multiLine: true), '');
+
+    // Step 7: Remove SUGGESTIONS: lines and horizontal rules
+    content = content.replaceAll(
+      RegExp(r'SUGGESTIONS:.*', caseSensitive: false),
+      '',
+    );
+    content = content.replaceAll(
+      RegExp(r'Suggested follow-up questions:.*', caseSensitive: false),
+      '',
+    );
+    content = content.replaceAll(
+      RegExp(
+        r'^Suggested.*questions.*$',
+        caseSensitive: false,
+        multiLine: true,
+      ),
+      '',
+    );
+
+    // Remove horizontal rules (---, ___, ***)
+    content = content.replaceAll(
+      RegExp(r'^[\-_\*]{3,}\s*$', multiLine: true),
+      '',
+    );
+    content = content.replaceAll(
+      RegExp(r'^\s*[\-_]{3,}\s*$', multiLine: true),
+      '',
+    );
+
+    // Step 8: Remove emoji and special markers
+    content = content.replaceAll(RegExp(r'│\s*💡\s*'), '');
+    content = content.replaceAll(RegExp(r'💡\s*'), '');
+    content = content.replaceAll(RegExp(r'│\s*'), '');
+    content = content.replaceAll(RegExp(r'┃\s*'), '');
+    content = content.replaceAll(RegExp(r'─+'), ''); // Remove horizontal lines
+
+    // Step 9: Remove any remaining backticks and triple asterisks
+    content = content.replaceAll('```json', '');
+    content = content.replaceAll('```', '');
+    content = content.replaceAll('***json', '');
+    content = content.replaceAll('***', '');
+
+    // Step 10: DON'T remove double asterisks ** (markdown bold)
+    // Keep ** for bold formatting - it's valid markdown
+
+    // Step 11: Remove lines with only special characters
+    content = content.replaceAll(
+      RegExp(r'^\s*[\[\]{}",\s]*\s*$', multiLine: true),
+      '',
+    );
+
+    // Step 12: Clean up extra blank lines and whitespace
+    content = content.replaceAll(RegExp(r'\n{3,}'), '\n\n');
+    content = content.replaceAll(RegExp(r'^\s+', multiLine: true), '');
+    content = content.trim();
+
+    logger.debug('Cleaned content length: ${content.length}');
+    logger.debug('Extracted ${suggestedQuestions.length} suggested questions');
+
+    // Safety: if cleanup removed too much, return original with basic cleanup
+    if (content.isEmpty || content.length < 10) {
+      logger.warning('Cleanup removed too much content! Returning original.');
+      content = originalContent
+          .replaceAll('```json', '')
+          .replaceAll('```', '')
+          .replaceAll('***json', '')
+          .replaceAll('***', '')
+          .trim();
+    }
+
+    return {'content': content, 'questions': suggestedQuestions};
   }
-
-  // Step 2: Remove ```json ... ``` blocks
-  content = content.replaceAll(
-    RegExp(r'```json[\s\S]*?```', multiLine: true),
-    '',
-  );
-  
-  // Step 3: Remove ***json ... *** blocks
-  content = content.replaceAll(
-    RegExp(r'\*\*\*json[\s\S]*?\*\*\*', multiLine: true),
-    '',
-  );
-  
-  // Step 4: Remove any remaining ``` code blocks
-  content = content.replaceAll(
-    RegExp(r'```[\s\S]*?```', multiLine: true),
-    '',
-  );
-  
-  // Step 5: Remove standalone JSON arrays
-  content = content.replaceAll(
-    RegExp(r'\[\s*"[^"]*"(?:\s*,\s*"[^"]*")*\s*\]', multiLine: true),
-    '',
-  );
-  
-  // Step 6: Remove lines that start with "***json" or end with "***"
-  content = content.replaceAll(
-    RegExp(r'^.*\*\*\*json.*$', multiLine: true),
-    '',
-  );
-  content = content.replaceAll(
-    RegExp(r'^.*\*\*\*\s*$', multiLine: true),
-    '',
-  );
-  
-  // Step 7: Remove SUGGESTIONS: lines and horizontal rules
-  content = content.replaceAll(
-    RegExp(r'SUGGESTIONS:.*', caseSensitive: false),
-    '',
-  );
-  content = content.replaceAll(
-    RegExp(r'Suggested follow-up questions:.*', caseSensitive: false),
-    '',
-  );
-  content = content.replaceAll(
-    RegExp(r'^Suggested.*questions.*$', caseSensitive: false, multiLine: true),
-    '',
-  );
-  
-  // Remove horizontal rules (---, ___, ***)
-  content = content.replaceAll(RegExp(r'^[\-_\*]{3,}\s*$', multiLine: true), '');
-  content = content.replaceAll(RegExp(r'^\s*[\-_]{3,}\s*$', multiLine: true), '');
-  
-  // Step 8: Remove emoji and special markers
-  content = content.replaceAll(RegExp(r'│\s*💡\s*'), '');
-  content = content.replaceAll(RegExp(r'💡\s*'), '');
-  content = content.replaceAll(RegExp(r'│\s*'), '');
-  content = content.replaceAll(RegExp(r'┃\s*'), '');
-  content = content.replaceAll(RegExp(r'─+'), '');  // Remove horizontal lines
-  
-  // Step 9: Remove any remaining backticks and triple asterisks
-  content = content.replaceAll('```json', '');
-  content = content.replaceAll('```', '');
-  content = content.replaceAll('***json', '');
-  content = content.replaceAll('***', '');
-  
-  // Step 10: DON'T remove double asterisks ** (markdown bold)
-  // Keep ** for bold formatting - it's valid markdown
-  
-  // Step 11: Remove lines with only special characters
-  content = content.replaceAll(
-    RegExp(r'^\s*[\[\]{}",\s]*\s*$', multiLine: true),
-    '',
-  );
-  
-  // Step 12: Clean up extra blank lines and whitespace
-  content = content.replaceAll(RegExp(r'\n{3,}'), '\n\n');
-  content = content.replaceAll(RegExp(r'^\s+', multiLine: true), '');
-  content = content.trim();
-
-  logger.debug('Cleaned content length: ${content.length}');
-  logger.debug('Extracted ${suggestedQuestions.length} suggested questions');
-
-  // Safety: if cleanup removed too much, return original with basic cleanup
-  if (content.isEmpty || content.length < 10) {
-    logger.warning('Cleanup removed too much content! Returning original.');
-    content = originalContent
-        .replaceAll('```json', '')
-        .replaceAll('```', '')
-        .replaceAll('***json', '')
-        .replaceAll('***', '')
-        .trim();
-  }
-
-  return {
-    'content': content,
-    'questions': suggestedQuestions,
-  };
-}
 
   /// Clean response content (legacy method for backward compatibility)
   String _cleanResponseContent(String content) {
@@ -1032,12 +1056,18 @@ Map<String, dynamic> _cleanResponseContentAndExtractQuestions(String content) {
     try {
       final response = await dio.patch(ApiConstants.chatArchive(id));
       if (response.statusCode == 200) {
-        final data = response.data is Map ? response.data['data'] ?? response.data : response.data;
+        final data = response.data is Map
+            ? response.data['data'] ?? response.data
+            : response.data;
         return ChatConversationModel.fromJson(data as Map<String, dynamic>);
       }
-      throw ServerException(message: response.data['message'] ?? 'Failed to archive chat');
+      throw ServerException(
+        message: response.data['message'] ?? 'Failed to archive chat',
+      );
     } on DioException catch (e) {
-      throw ServerException(message: e.response?.data['message'] ?? e.message ?? 'Network error');
+      throw ServerException(
+        message: e.response?.data['message'] ?? e.message ?? 'Network error',
+      );
     } catch (e) {
       throw ServerException(message: 'Unexpected error: $e');
     }
@@ -1048,12 +1078,18 @@ Map<String, dynamic> _cleanResponseContentAndExtractQuestions(String content) {
     try {
       final response = await dio.patch(ApiConstants.chatPin(id));
       if (response.statusCode == 200) {
-        final data = response.data is Map ? response.data['data'] ?? response.data : response.data;
+        final data = response.data is Map
+            ? response.data['data'] ?? response.data
+            : response.data;
         return ChatConversationModel.fromJson(data as Map<String, dynamic>);
       }
-      throw ServerException(message: response.data['message'] ?? 'Failed to pin chat');
+      throw ServerException(
+        message: response.data['message'] ?? 'Failed to pin chat',
+      );
     } on DioException catch (e) {
-      throw ServerException(message: e.response?.data['message'] ?? e.message ?? 'Network error');
+      throw ServerException(
+        message: e.response?.data['message'] ?? e.message ?? 'Network error',
+      );
     } catch (e) {
       throw ServerException(message: 'Unexpected error: $e');
     }
@@ -1064,12 +1100,18 @@ Map<String, dynamic> _cleanResponseContentAndExtractQuestions(String content) {
     try {
       final response = await dio.patch(ApiConstants.chatShare(id));
       if (response.statusCode == 200) {
-        final data = response.data is Map ? response.data['data'] ?? response.data : response.data;
+        final data = response.data is Map
+            ? response.data['data'] ?? response.data
+            : response.data;
         return ChatConversationModel.fromJson(data as Map<String, dynamic>);
       }
-      throw ServerException(message: response.data['message'] ?? 'Failed to share chat');
+      throw ServerException(
+        message: response.data['message'] ?? 'Failed to share chat',
+      );
     } on DioException catch (e) {
-      throw ServerException(message: e.response?.data['message'] ?? e.message ?? 'Network error');
+      throw ServerException(
+        message: e.response?.data['message'] ?? e.message ?? 'Network error',
+      );
     } catch (e) {
       throw ServerException(message: 'Unexpected error: $e');
     }
@@ -1118,12 +1160,21 @@ Map<String, dynamic> _cleanResponseContentAndExtractQuestions(String content) {
 
   @override
   Stream<String> regenerateMessage(String chatId, String messageId) async* {
-    yield* _streamRequest(ApiConstants.messageRegenerate(chatId, messageId), {});
+    yield* _streamRequest(
+      ApiConstants.messageRegenerate(chatId, messageId),
+      {},
+    );
   }
 
   @override
-  Stream<String> editMessage(String chatId, String messageId, String newContent) async* {
-    yield* _streamRequest(ApiConstants.messageEdit(chatId, messageId), {'content': newContent});
+  Stream<String> editMessage(
+    String chatId,
+    String messageId,
+    String newContent,
+  ) async* {
+    yield* _streamRequest(ApiConstants.messageEdit(chatId, messageId), {
+      'content': newContent,
+    });
   }
 
   @override
@@ -1140,7 +1191,9 @@ Map<String, dynamic> _cleanResponseContentAndExtractQuestions(String content) {
         options: Options(responseType: ResponseType.stream),
       );
       if (response.statusCode == 200 || response.statusCode == 201) {
-        final textStream = (response.data as ResponseBody).stream.cast<List<int>>().transform(utf8.decoder);
+        final textStream = (response.data as ResponseBody).stream
+            .cast<List<int>>()
+            .transform(utf8.decoder);
         final StringBuffer contentBuffer = StringBuffer();
         String partialLine = '';
 
@@ -1172,7 +1225,9 @@ Map<String, dynamic> _cleanResponseContentAndExtractQuestions(String content) {
         throw ServerException(message: 'Request failed');
       }
     } on DioException catch (e) {
-      throw ServerException(message: e.response?.data['message'] ?? 'Network error');
+      throw ServerException(
+        message: e.response?.data['message'] ?? 'Network error',
+      );
     } catch (e) {
       throw ServerException(message: 'Unexpected error: $e');
     }
@@ -1196,7 +1251,9 @@ Map<String, dynamic> _cleanResponseContentAndExtractQuestions(String content) {
         },
       );
     } on DioException catch (e) {
-      throw ServerException(message: e.response?.data['message'] ?? 'Network error');
+      throw ServerException(
+        message: e.response?.data['message'] ?? 'Network error',
+      );
     } catch (e) {
       throw ServerException(message: 'Unexpected error: $e');
     }
@@ -1210,11 +1267,15 @@ Map<String, dynamic> _cleanResponseContentAndExtractQuestions(String content) {
       final response = await dio.get(ApiConstants.contextsSidebar);
       if (response.statusCode == 200) {
         final data = _parseListResponse(response.data);
-        return data.map((j) => UserContextModel.fromJson(j as Map<String, dynamic>)).toList();
+        return data
+            .map((j) => UserContextModel.fromJson(j as Map<String, dynamic>))
+            .toList();
       }
       throw ServerException(message: 'Failed to fetch sidebar contexts');
     } on DioException catch (e) {
-      throw ServerException(message: e.response?.data['message'] ?? 'Network error');
+      throw ServerException(
+        message: e.response?.data['message'] ?? 'Network error',
+      );
     } catch (e) {
       throw ServerException(message: 'Unexpected error: $e');
     }
@@ -1226,18 +1287,26 @@ Map<String, dynamic> _cleanResponseContentAndExtractQuestions(String content) {
       final response = await dio.get(ApiConstants.contexts);
       if (response.statusCode == 200) {
         final data = _parseListResponse(response.data);
-        return data.map((j) => UserContextModel.fromJson(j as Map<String, dynamic>)).toList();
+        return data
+            .map((j) => UserContextModel.fromJson(j as Map<String, dynamic>))
+            .toList();
       }
       throw ServerException(message: 'Failed to fetch contexts');
     } on DioException catch (e) {
-      throw ServerException(message: e.response?.data['message'] ?? 'Network error');
+      throw ServerException(
+        message: e.response?.data['message'] ?? 'Network error',
+      );
     } catch (e) {
       throw ServerException(message: 'Unexpected error: $e');
     }
   }
 
   @override
-  Future<UserContextModel> createContext(String name, String content, String role) async {
+  Future<UserContextModel> createContext(
+    String name,
+    String content,
+    String role,
+  ) async {
     try {
       final response = await dio.post(
         ApiConstants.contexts,
@@ -1249,7 +1318,9 @@ Map<String, dynamic> _cleanResponseContentAndExtractQuestions(String content) {
       }
       throw ServerException(message: 'Failed to create context');
     } on DioException catch (e) {
-      throw ServerException(message: e.response?.data['message'] ?? 'Network error');
+      throw ServerException(
+        message: e.response?.data['message'] ?? 'Network error',
+      );
     } catch (e) {
       throw ServerException(message: 'Unexpected error: $e');
     }
@@ -1265,14 +1336,21 @@ Map<String, dynamic> _cleanResponseContentAndExtractQuestions(String content) {
       }
       throw ServerException(message: 'Failed to fetch context');
     } on DioException catch (e) {
-      throw ServerException(message: e.response?.data['message'] ?? 'Network error');
+      throw ServerException(
+        message: e.response?.data['message'] ?? 'Network error',
+      );
     } catch (e) {
       throw ServerException(message: 'Unexpected error: $e');
     }
   }
 
   @override
-  Future<UserContextModel> updateContext(String id, String name, String content, String role) async {
+  Future<UserContextModel> updateContext(
+    String id,
+    String name,
+    String content,
+    String role,
+  ) async {
     try {
       final response = await dio.put(
         ApiConstants.contextById(id),
@@ -1284,7 +1362,9 @@ Map<String, dynamic> _cleanResponseContentAndExtractQuestions(String content) {
       }
       throw ServerException(message: 'Failed to update context');
     } on DioException catch (e) {
-      throw ServerException(message: e.response?.data['message'] ?? 'Network error');
+      throw ServerException(
+        message: e.response?.data['message'] ?? 'Network error',
+      );
     } catch (e) {
       throw ServerException(message: 'Unexpected error: $e');
     }
@@ -1298,7 +1378,9 @@ Map<String, dynamic> _cleanResponseContentAndExtractQuestions(String content) {
         throw ServerException(message: 'Failed to delete context');
       }
     } on DioException catch (e) {
-      throw ServerException(message: e.response?.data['message'] ?? 'Network error');
+      throw ServerException(
+        message: e.response?.data['message'] ?? 'Network error',
+      );
     } catch (e) {
       throw ServerException(message: 'Unexpected error: $e');
     }

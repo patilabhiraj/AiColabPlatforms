@@ -5,7 +5,7 @@ import '../../../../../core/theme/app_colors.dart';
 import '../../../../../core/theme/theme_controller.dart';
 import '../../../../../core/utils/app_logger.dart';
 import '../../../../auth/bloc/auth_bloc.dart';
-import '../../../../settings/presentation/pages/settings_hub_page.dart';
+import '../../../../settings/presentation/pages/dashboard_page.dart';
 
 class DrawerProfileFooter extends StatelessWidget {
   const DrawerProfileFooter({super.key});
@@ -190,7 +190,7 @@ class DrawerProfileFooter extends StatelessWidget {
               onTap: () {
                 Navigator.pop(sheetContext);
                 Navigator.of(context).push(
-                  MaterialPageRoute(builder: (_) => const SettingsHubPage()),
+                  MaterialPageRoute(builder: (_) => const DashboardPage()),
                 );
               },
             ),

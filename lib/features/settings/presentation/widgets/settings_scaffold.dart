@@ -1,33 +1,47 @@
 import 'package:flutter/material.dart';
 import '../../../../core/theme/app_colors.dart';
 
-/// Shared page shell for every Settings screen: a back button, a title, and
-/// a themed background — keeps all settings pages visually consistent.
+/// Shared page shell for every Settings screen: a back button (or hamburger,
+/// for the Dashboard root), a title, and a themed background — keeps all
+/// settings pages visually consistent.
 class SettingsScaffold extends StatelessWidget {
   const SettingsScaffold({
     super.key,
     required this.title,
     required this.child,
     this.actions,
+    this.drawer,
   });
 
   final String title;
   final Widget child;
   final List<Widget>? actions;
 
+  /// When set, this page is a drawer root (the Dashboard): the app bar shows
+  /// a hamburger icon that opens [drawer] instead of a back arrow.
+  final Widget? drawer;
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: context.cBg,
+      drawer: drawer,
       appBar: AppBar(
         backgroundColor: context.cBg,
         elevation: 0,
         scrolledUnderElevation: 0,
         surfaceTintColor: Colors.transparent,
-        leading: IconButton(
-          icon: Icon(Icons.arrow_back_rounded, color: context.cFg),
-          onPressed: () => Navigator.of(context).pop(),
-        ),
+        leading: drawer != null
+            ? Builder(
+                builder: (context) => IconButton(
+                  icon: Icon(Icons.menu_rounded, color: context.cFg),
+                  onPressed: () => Scaffold.of(context).openDrawer(),
+                ),
+              )
+            : IconButton(
+                icon: Icon(Icons.arrow_back_rounded, color: context.cFg),
+                onPressed: () => Navigator.of(context).pop(),
+              ),
         title: Text(
           title,
           style: TextStyle(

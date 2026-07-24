@@ -6,6 +6,7 @@ import '../../../../app/injection.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../auth/bloc/auth_bloc.dart';
 import '../../bloc/dashboard/dashboard_bloc.dart';
+import '../widgets/settings_drawer.dart';
 import '../widgets/settings_scaffold.dart';
 import '../widgets/token_progress_bar.dart';
 import '../widgets/usage_line_chart.dart';
@@ -33,6 +34,7 @@ class _DashboardView extends StatelessWidget {
 
     return SettingsScaffold(
       title: 'Dashboard',
+      drawer: const SettingsDrawer(),
       child: BlocBuilder<DashboardBloc, DashboardState>(
         builder: (context, state) {
           if (state is DashboardLoading || state is DashboardInitial) {

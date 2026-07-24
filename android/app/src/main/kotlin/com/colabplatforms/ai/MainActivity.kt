@@ -1,4 +1,4 @@
-package com.example.colabplatforms_ai
+package com.colabplatforms.ai
 
 import io.flutter.embedding.android.FlutterActivity
 

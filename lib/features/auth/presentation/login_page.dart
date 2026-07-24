@@ -2,11 +2,11 @@ import 'package:colabplatforms_ai/core/widgets/custom_snackbar.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
-import 'package:flutter_web_auth_2/flutter_web_auth_2.dart';
 
+import '../../../app/injection.dart';
 import '../../../app/routes/router.dart';
 import '../../../core/theme/app_colors.dart';
-import '../../../core/constants/api_constants.dart';
+import '../data/services/google_auth_service.dart';
 import '../bloc/auth_bloc.dart';
 import 'widgets/widgets.dart';
 
@@ -141,21 +141,22 @@ class _LoginPageState extends State<LoginPage> {
                   GoogleSignInButton(
                     onPressed: () async {
                       try {
-                        final result = await FlutterWebAuth2.authenticate(
-                          url:
-                              '${ApiConstants.baseUrl}${ApiConstants.googleStart}',
-                          callbackUrlScheme: 'colabplatforms',
-                        );
-                        final token = Uri.parse(
-                          result,
-                        ).queryParameters['token'];
-                        if (token != null && context.mounted) {
+                        final idToken =
+                            await sl<GoogleAuthService>().signInAndGetIdToken();
+                        if (context.mounted) {
                           context.read<AuthBloc>().add(
-                            AuthGoogleSignInRequested(token: token),
+                            AuthGoogleSignInRequested(idToken: idToken),
                           );
                         }
+                      } on GoogleSignInCancelled {
+                        // User dismissed the picker — no error to show.
                       } catch (_) {
-                        // user cancelled
+                        if (context.mounted) {
+                          CustomSnackBar.showError(
+                            context,
+                            'Google sign-in failed. Please try again.',
+                          );
+                        }
                       }
                     },
                   ),

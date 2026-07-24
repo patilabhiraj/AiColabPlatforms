@@ -1,4 +1,3 @@
-import 'dart:convert';
 import '../../../../core/constants/api_constants.dart';
 import '../../../../core/errors/exceptions.dart';
 import '../../../../core/network/api_client.dart';
@@ -73,11 +72,16 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
     return UserModel.fromJson(response.data);
   }
 
-  // Google OAuth is server-side: the WebView returns a JWT from the backend's
-  // /auth/google/callback redirect. We decode it locally to build UserModel.
+  // Native Google Sign-In: the app obtains a Google ID token via the SDK and
+  // exchanges it here. The backend verifies it, creates the account if needed,
+  // and returns { user, token, isNewUser } — the same JWT shape as email login.
   @override
-  Future<UserModel> googleLogin(String token) async {
-    return _userFromJwt(token);
+  Future<UserModel> googleLogin(String idToken) async {
+    final response = await apiClient.dio.post(
+      ApiConstants.googleMobile,
+      data: {"idToken": idToken},
+    );
+    return UserModel.fromJson(response.data);
   }
 
   @override
@@ -125,21 +129,5 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
   Future<UserModel> getProfile() async {
     final response = await apiClient.dio.get(ApiConstants.userProfile);
     return UserModel.fromJson(response.data);
-  }
-
-  // ── helpers ───────────────────────────────────────────────────────────────
-
-  UserModel _userFromJwt(String token) {
-    final parts = token.split('.');
-    if (parts.length != 3) throw const FormatException('Invalid JWT');
-    final payload = utf8.decode(base64Url.decode(base64Url.normalize(parts[1])));
-    final map = json.decode(payload) as Map<String, dynamic>;
-    return UserModel(
-      id: (map['id'] ?? map['sub'] ?? '').toString(),
-      email: map['email'] ?? '',
-      firstName: map['firstName'] ?? map['given_name'] ?? 'Google',
-      lastName: map['lastName'] ?? map['family_name'] ?? 'User',
-      token: token,
-    );
   }
 }

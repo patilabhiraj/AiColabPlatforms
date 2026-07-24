@@ -73,18 +73,17 @@ class AuthRepositoryImpl implements AuthRepository {
   }
 
   @override
-  Future<Either<Failure, UserEntity>> googleLogin(String token) async {
+  Future<Either<Failure, UserEntity>> googleLogin(String idToken) async {
     try {
-      final userModel = await remoteDataSource.googleLogin(token);
-      print('DEBUG: remoteDataSource.googleLogin returned token: "${userModel.token}"');
+      final userModel = await remoteDataSource.googleLogin(idToken);
       if (userModel.token.isNotEmpty) {
         await localDataSource.saveToken(userModel.token);
-      } else {
-        print('DEBUG WARNING: Token is empty in googleLogin response!');
       }
       return Right(userModel);
-    } catch (e) {
-      return Left(ServerFailure(e.toString()));
+    } on DioException catch (e) {
+      return Left(ServerFailure(_dioMessage(e, 'Google sign-in failed.')));
+    } catch (_) {
+      return const Left(ServerFailure('An unexpected error occurred.'));
     }
   }
 

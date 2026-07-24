@@ -1,13 +1,15 @@
 abstract final class ApiConstants {
-  // static const String baseUrl = 'https://98fb9zw4-5000.inc1.devtunnels.ms';
-  static const String baseUrl =
-      'https://ai-colab-chat-manan-backend.onrender.com';
+  static const String baseUrl = 'https://98fb9zw4-5000.inc1.devtunnels.ms';
+  // static const String baseUrl =
+  //     'https://ai-colab-chat-manan-backend.onrender.com';
 
   // ── Auth ─────────────────────────────────────────────────────────────────────
   static const String login = '/api/auth/login';
   static const String register = '/api/auth/register';
-  static const String googleStart = '/api/auth/google/start';
-  static const String googleCallback = '/api/auth/google/callback';
+  // Native Google Sign-In: the app obtains a Google ID token via the
+  // google_sign_in SDK and POSTs it here → backend returns { user, token,
+  // isNewUser }. Handles both account creation and login.
+  static const String googleMobile = '/api/auth/google/mobile';
   static const String verifyEmailOtp = '/api/auth/verify-email-otp';
   static const String resendEmailOtp = '/api/auth/resend-email-otp';
   static const String forgotPassword = '/api/auth/forgot-password';

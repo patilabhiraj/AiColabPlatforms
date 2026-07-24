@@ -117,7 +117,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     logger.info('🔐 Google Sign-In attempt');
     emit(AuthLoading());
     
-    final result = await _googleLoginUseCase(event.token);
+    final result = await _googleLoginUseCase(event.idToken);
 
     result.fold(
       (failure) {

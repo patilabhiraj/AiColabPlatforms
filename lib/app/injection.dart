@@ -9,6 +9,7 @@ import '../features/auth/bloc/splash_bloc.dart';
 import '../features/auth/data/datasources/auth_local_data_source.dart';
 import '../features/auth/data/datasources/auth_remote_data_source.dart';
 import '../features/auth/data/repositories/auth_repository_impl.dart';
+import '../features/auth/data/services/google_auth_service.dart';
 import '../features/auth/domain/repositories/auth_repository.dart';
 import '../features/auth/domain/usecases/forgot_password_usecase.dart';
 import '../features/auth/domain/usecases/get_cached_user_usecase.dart';
@@ -56,6 +57,7 @@ void init() {
   sl.registerLazySingleton(() => ApiClient());
   sl.registerLazySingleton(() => const FlutterSecureStorage());
   sl.registerLazySingleton(() => ThemeController());
+  sl.registerLazySingleton(() => GoogleAuthService());
 
   // ── Data Sources ──────────────────────────────────────────────────────────
   sl.registerLazySingleton<AuthLocalDataSource>(

@@ -8,7 +8,7 @@ class GoogleLoginUseCase {
 
   GoogleLoginUseCase(this.repository);
 
-  Future<Either<Failure, UserEntity>> call(String token) {
-    return repository.googleLogin(token);
+  Future<Either<Failure, UserEntity>> call(String idToken) {
+    return repository.googleLogin(idToken);
   }
 }

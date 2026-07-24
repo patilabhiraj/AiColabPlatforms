@@ -10,7 +10,7 @@ abstract class AuthRepository {
     required String email,
     required String password,
   });
-  Future<Either<Failure, UserEntity>> googleLogin(String token);
+  Future<Either<Failure, UserEntity>> googleLogin(String idToken);
   Future<Either<Failure, void>> forgotPassword(String email);
   Future<Either<Failure, void>> resetPassword({
     required String email,
